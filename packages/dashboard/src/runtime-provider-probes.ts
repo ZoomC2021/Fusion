@@ -37,6 +37,10 @@ import {
 } from "@fusion-plugin-examples/grok-runtime";
 
 import {
+  discoverDroidProviderModels,
+} from "@fusion-plugin-examples/droid-runtime";
+
+import {
   discoverClaudeProviderModels,
   probeClaudeBinary,
   type ClaudeBinaryStatus,
@@ -178,6 +182,44 @@ export async function discoverGrokCliModels(opts?: {
   timeoutMs?: number;
 }): Promise<GrokModelDiscoveryResult> {
   return discoverGrokProviderModels(opts) as Promise<GrokModelDiscoveryResult>;
+}
+
+/**
+ * Result shape returned by the Droid plugin's model-discovery contribution.
+ *
+ * FNXC:DroidCli 2026-09-06-00:00:
+ * Mirrors GrokModelDiscoveryResult above; the Droid plugin's discovery parses
+ * the `droid exec --help` catalog and carries the human label per entry, but
+ * reasoning/contextWindow are not reported by the source today, so the shape
+ * stays consistent with the other CLI providers for a future enrichment pass.
+ */
+export interface DroidModelDiscoveryResult {
+  models: Array<{ id: string; label?: string; reasoning?: boolean; contextWindow?: number }>;
+  source: string;
+  fallbackUsed: boolean;
+  reason?: string;
+}
+
+/**
+ * Discover Droid CLI models via the `droid exec --help` catalog parse,
+ * delegating to the Droid Runtime plugin's `discoverDroidProviderModels`
+ * contribution.
+ *
+ * This is the stable mock/spy boundary for `droid-model-cache.ts` and its
+ * tests — never called directly per-request; see `getDroidPickerModels`.
+ * Never throws by contract of the underlying plugin function (a missing/
+ * unavailable binary resolves to `{ models: [], fallbackUsed: true, ... }`).
+ *
+ * FNXC:DroidCli 2026-09-06-00:00:
+ * Binary probing stays in droid-cli-probe.ts (the existing status/probe path);
+ * only discovery is consolidated here so the picker cache and route tests mock
+ * one boundary without importing the plugin package directly.
+ */
+export async function discoverDroidCliModels(opts?: {
+  binaryPath?: string;
+  timeoutMs?: number;
+}): Promise<DroidModelDiscoveryResult> {
+  return discoverDroidProviderModels(opts) as Promise<DroidModelDiscoveryResult>;
 }
 
 /**

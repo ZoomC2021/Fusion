@@ -6,6 +6,7 @@ import type { CustomProvider } from "@fusion/core";
 import { ApiError } from "../api-error.js";
 import { getCursorPickerModels, CURSOR_PICKER_PROVIDER_ID } from "../cursor-model-cache.js";
 import { getGrokPickerModels, GROK_PICKER_PROVIDER_ID } from "../grok-model-cache.js";
+import { getDroidPickerModels, DROID_PICKER_PROVIDER_ID } from "../droid-model-cache.js";
 import { getClaudePickerModels, CLAUDE_PICKER_PROVIDER_ID } from "../claude-model-cache.js";
 import { getOmpPickerModels, OMP_PICKER_PROVIDER_ID } from "../omp-model-cache.js";
 import { getHermesPickerModels, HERMES_PICKER_PROVIDER_ID } from "../hermes-model-cache.js";
@@ -283,6 +284,7 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
     let defaultModelId: string | undefined;
     let useClaudeCli = false;
     let useDroidCli = false;
+    let droidCliBinaryPath: string | undefined;
     let useLlamaCpp = false;
     let useCursorCli = false;
     let cursorCliBinaryPath: string | undefined;
@@ -338,6 +340,25 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
         ompCliBinaryPath =
           typeof rawOmpCliBinaryPath === "string" ? rawOmpCliBinaryPath.trim() || undefined : undefined;
         customProviders = globalSettings.customProviders ?? [];
+
+        /*
+        FNXC:DroidCli 2026-09-06-00:00:
+        Unlike cursorCliBinaryPath/grokCliBinaryPath (global settings), the
+        Droid CLI binary override lives in the droid runtime plugin's settings
+        store (`droidBinaryPath`) — the same source the auth/status probe path
+        reads (probeDroidCliWithEffectiveBinary in register-auth-routes.ts).
+        Best-effort read so picker discovery spawns the same `droid`
+        executable the settings card validated; any store failure or unset
+        override falls back to PATH auto-detection.
+        */
+        try {
+          const droidPlugin = await store.getPluginStore().getPlugin("fusion-plugin-droid-runtime");
+          const rawDroidCliBinaryPath = droidPlugin?.settings?.droidBinaryPath;
+          droidCliBinaryPath =
+            typeof rawDroidCliBinaryPath === "string" ? rawDroidCliBinaryPath.trim() || undefined : undefined;
+        } catch {
+          // Missing/unreadable plugin store: fall back to default droid binary resolution.
+        }
 
         const mergedSettings = await store.getSettingsFast();
         const resolvedPlanningModel = resolvePlanningSettingsModel(mergedSettings);
@@ -588,6 +609,43 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
         }
       }
 
+      /*
+      FNXC:DroidCli 2026-09-06-00:00:
+      Additively surface Droid CLI-discovered models (`droid exec --help`
+      catalog parse) under the stable "droid-cli" provider id, mirroring the
+      FN-7696 cursor-cli / FN-7705 grok-cli merges above. This closes the
+      model-registry gap where the vendored droid-cli extension registered its
+      provider with an empty model list and no dashboard merge ever populated
+      it — droid-cli showed zero models while every other CLI integration
+      surfaced rows. Droid has its own settings toggle (useDroidCli) — the
+      toggle IS the signal here, so discovery is only attempted when
+      useDroidCli is true. Fetched through getDroidPickerModels, backed by a
+      short-TTL, single-flight cache keyed by binary path — this call NEVER
+      spawns droid per request, and NEVER throws (a missing/failed/
+      unavailable binary degrades to []). Droid rows are merged respecting the
+      existing seenModelKeys provider/id dedup so an existing row always wins
+      over a colliding Droid row — purely additive, must never displace,
+      overwrite, or filter out an existing row.
+      */
+      if (useDroidCli) {
+        // getDroidPickerModels never throws by contract (see
+        // droid-model-cache.ts), but this try/catch is a defensive belt so a
+        // Droid discovery failure can never reject the /models handler or
+        // drop existing rows — degrade to zero Droid rows instead.
+        try {
+          const droidModels = await getDroidPickerModels({ binaryPath: droidCliBinaryPath });
+          for (const droidModel of droidModels) {
+            const key = `${droidModel.provider}/${droidModel.id}`;
+            if (seenModelKeys.has(key)) continue;
+            seenModelKeys.add(key);
+            models.push(droidModel);
+          }
+        } catch (droidErr: unknown) {
+          const message = droidErr instanceof Error ? droidErr.message : String(droidErr);
+          runtimeLogger.child("models").warn(`Failed to load droid-cli models: ${message}`);
+        }
+      }
+
       // Filter to only providers the user has explicitly configured in Fusion.
       // getAvailable() checks supplemental credential stores (Codex CLI,
       // Claude Code, env vars) which surface providers the user may not
@@ -609,7 +667,7 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       const configuredProviders = await getConfiguredProviderNames(options?.authStorage);
       if (useClaudeCli) configuredProviders.add("pi-claude-cli");
       if (useClaudeCli) configuredProviders.add(CLAUDE_PICKER_PROVIDER_ID);
-      if (useDroidCli) configuredProviders.add("droid-cli");
+      if (useDroidCli) configuredProviders.add(DROID_PICKER_PROVIDER_ID);
       if (useLlamaCpp) configuredProviders.add("llama-server");
       // FNXC:ModelCatalog 2026-07-08-00:05 (FN-7696): allow-list "cursor-cli"
       // through the final filter whenever the toggle is on — independent of

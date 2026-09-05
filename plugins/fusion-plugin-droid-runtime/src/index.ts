@@ -74,11 +74,15 @@ export { DroidRuntimeAdapter };
 export { probeDroidBinary } from "./probe.js";
 export type { DroidBinaryStatus } from "./probe.js";
 export { streamViaCli } from "./provider.js";
+export { discoverDroidProviderModels } from "./discovery.js";
 export {
   discoverDroidModels,
+  discoverDroidModelEntries,
+  parseDroidModelEntriesFromHelp,
   validateCliPresenceAsync,
   validateCliAuthAsync,
   killAllProcesses,
 } from "./process-manager.js";
+export type { DroidModelEntry, DroidDiscoveryOptions } from "./process-manager.js";
 export { getCustomToolDefs, toolsFromContext, writeMcpConfig } from "./mcp-config.js";
 export type { McpToolDef } from "./mcp-config.js";

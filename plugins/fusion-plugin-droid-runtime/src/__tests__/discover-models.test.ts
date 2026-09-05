@@ -8,7 +8,7 @@ vi.mock("node:child_process", () => ({
   spawn: spawnMock,
 }));
 
-import { discoverDroidModels, parseDroidModelsFromHelp } from "../process-manager.js";
+import { discoverDroidModels, discoverDroidModelEntries, parseDroidModelEntriesFromHelp, parseDroidModelsFromHelp } from "../process-manager.js";
 
 // Trimmed but faithful sample of real `droid exec --help` output.
 const HELP_SAMPLE = `Usage: droid exec [options] [prompt]
@@ -56,6 +56,36 @@ describe("parseDroidModelsFromHelp", () => {
 
   it("returns [] when no model sections are present", () => {
     expect(parseDroidModelsFromHelp("Usage: droid exec\n\nOptions:\n  -h, --help\n")).toEqual([]);
+  });
+});
+
+describe("parseDroidModelEntriesFromHelp", () => {
+  it("pairs each id with its human label, stripping a trailing (default) marker", () => {
+    expect(parseDroidModelEntriesFromHelp(HELP_SAMPLE)).toEqual([
+      { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+      { id: "gpt-5.5", label: "GPT-5.5" },
+      { id: "glm-5.2", label: "Droid Core (GLM-5.2)" },
+      { id: "custom:Kimi-K2.5-Turbo-0", label: "Kimi K2.5 Turbo" },
+      { id: "custom:CC:-Opus-4.6-(Max)-0", label: "DroidProxy-CC: Opus 4.6 (Max)" },
+    ]);
+  });
+
+  it("keeps non-default parentheticals verbatim while stripping only (default)", () => {
+    const help = [
+      "Available Models:",
+      "  gpt-5.6-sol                   GPT-5.6 Sol (default)",
+      "  custom:CC:-Opus-4.6-(Max)-0   DroidProxy-CC: Opus 4.6 (Max)",
+      "",
+    ].join("\n");
+    expect(parseDroidModelEntriesFromHelp(help)).toEqual([
+      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+      { id: "custom:CC:-Opus-4.6-(Max)-0", label: "DroidProxy-CC: Opus 4.6 (Max)" },
+    ]);
+  });
+
+  it("returns [] when no model sections are present", () => {
+    expect(parseDroidModelEntriesFromHelp("Usage: droid exec\n\nOptions:\n  -h, --help\n")).toEqual([]);
   });
 });
 
@@ -118,5 +148,48 @@ describe("discoverDroidModels", () => {
     });
 
     await expect(discoverDroidModels()).resolves.toEqual([]);
+  });
+
+  it("spawns the bare `droid` command when no binaryPath override is given", async () => {
+    spawnMock.mockImplementationOnce(() => {
+      const proc = makeProc();
+      queueMicrotask(() => {
+        proc.stdout.write(HELP_SAMPLE);
+        proc.emit("exit", 0);
+      });
+      return proc;
+    });
+
+    await discoverDroidModels();
+    expect(spawnMock).toHaveBeenCalledWith("droid", ["exec", "--help"], expect.anything());
+  });
+
+  it("spawns an explicit binaryPath override (machine-local droidBinaryPath setting)", async () => {
+    spawnMock.mockImplementationOnce(() => {
+      const proc = makeProc();
+      queueMicrotask(() => {
+        proc.stdout.write(HELP_SAMPLE);
+        proc.emit("exit", 0);
+      });
+      return proc;
+    });
+
+    const entries = await discoverDroidModelEntries({ binaryPath: "/opt/droid/droid" });
+    expect(spawnMock).toHaveBeenCalledWith("/opt/droid/droid", ["exec", "--help"], expect.anything());
+    expect(entries[0]).toEqual({ id: "claude-opus-4-8", label: "Claude Opus 4.8" });
+  });
+
+  it("treats a blank binaryPath override as unset (PATH auto-detection)", async () => {
+    spawnMock.mockImplementationOnce(() => {
+      const proc = makeProc();
+      queueMicrotask(() => {
+        proc.stdout.write(HELP_SAMPLE);
+        proc.emit("exit", 0);
+      });
+      return proc;
+    });
+
+    await discoverDroidModels({ binaryPath: "   " });
+    expect(spawnMock).toHaveBeenCalledWith("droid", ["exec", "--help"], expect.anything());
   });
 });

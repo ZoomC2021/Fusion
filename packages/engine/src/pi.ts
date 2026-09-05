@@ -1566,6 +1566,30 @@ function resolveVendoredDroidCliEntry(): string | null {
   }
 }
 
+/**
+ * Resolve the absolute path to Fusion's vendored `@fusion/devin-cli`
+ * extension entry. Follows the droid-cli vendored-extension pattern; the
+ * devin-cli package ships a pi extension that registers the `devin-cli`
+ * model provider (models discovered from `devin models list`).
+ */
+function resolveVendoredDevinCliEntry(): string | null {
+  try {
+    const require_ = createRequire(import.meta.url);
+    const pkgJsonPath = require_.resolve("@fusion/devin-cli/package.json");
+    const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf-8")) as {
+      pi?: { extensions?: unknown };
+    };
+    const extensions = pkgJson.pi?.extensions;
+    if (!Array.isArray(extensions) || extensions.length === 0) return null;
+    const entry = extensions[0];
+    if (typeof entry !== "string" || entry.length === 0) return null;
+    const path = resolve(dirname(pkgJsonPath), entry);
+    return existsSync(path) ? path : null;
+  } catch {
+    return null;
+  }
+}
+
 async function registerExtensionProviders(cwd: string, modelRegistry: ModelRegistry): Promise<void> {
   registerBuiltInZaiProvider(modelRegistry, (message) => extensionsLog.warn(message));
   registerBuiltInGrokProvider(modelRegistry, (message) => extensionsLog.warn(message));
@@ -1609,6 +1633,14 @@ async function registerExtensionProviders(cwd: string, modelRegistry: ModelRegis
       reconciledPaths,
       vendoredDroidCli,
     );
+
+    // Vendored `@fusion/devin-cli` extension (local addition): load it when
+    // the package is present so the `devin-cli` provider registers without
+    // requiring a user-level extension install.
+    const vendoredDevinCli = resolveVendoredDevinCliEntry();
+    if (vendoredDevinCli && !doubleReconciledPaths.includes(vendoredDevinCli)) {
+      doubleReconciledPaths.push(vendoredDevinCli);
+    }
 
     const extensionsResult = await discoverAndLoadExtensions(
       doubleReconciledPaths,

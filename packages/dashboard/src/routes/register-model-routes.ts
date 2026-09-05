@@ -668,6 +668,13 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       if (useClaudeCli) configuredProviders.add("pi-claude-cli");
       if (useClaudeCli) configuredProviders.add(CLAUDE_PICKER_PROVIDER_ID);
       if (useDroidCli) configuredProviders.add(DROID_PICKER_PROVIDER_ID);
+      // FNXC:DevinCli (local addition): the vendored `@fusion/devin-cli`
+      // extension registers its provider (with models discovered from
+      // `devin models list --format json`) straight into the model registry,
+      // so allow-list it unconditionally here. When the `devin` binary is
+      // missing or discovery fails, the extension registers zero rows and
+      // this add is inert.
+      configuredProviders.add("devin-cli");
       if (useLlamaCpp) configuredProviders.add("llama-server");
       // FNXC:ModelCatalog 2026-07-08-00:05 (FN-7696): allow-list "cursor-cli"
       // through the final filter whenever the toggle is on — independent of

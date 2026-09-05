@@ -90,7 +90,7 @@ export const BUILT_IN_API_KEY_PROVIDERS: ReadonlyArray<{ id: string; name: strin
   { id: "zai", name: "Zai" },
 ];
 
-const CLI_PROVIDER_IDS = new Set(["pi-claude-cli", "droid-cli"]);
+const CLI_PROVIDER_IDS = new Set(["pi-claude-cli", "droid-cli", "devin-cli"]);
 
 /*
 FNXC:ProviderAuth 2026-09-01-07:30:

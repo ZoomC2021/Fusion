@@ -1,0 +1,12 @@
+{
+  "name": "@fusion/devin-cli",
+  "version": "0.77.0-local",
+  "type": "module",
+  "private": true,
+  "main": "index.ts",
+  "pi": {
+    "extensions": [
+      "index.ts"
+    ]
+  }
+}

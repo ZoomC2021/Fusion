@@ -24,6 +24,9 @@ const mockCreateCustomProvider = vi.fn();
 const mockFetchCursorCliStatus = vi.fn();
 const mockSetCursorCliEnabled = vi.fn();
 const mockSetCursorCliBinaryPath = vi.fn();
+const mockFetchAgyCliStatus = vi.fn();
+const mockSetAgyCliEnabled = vi.fn();
+const mockSetAgyCliBinaryPath = vi.fn();
 const mockUseShellConnection = vi.fn();
 const mockConfirm = vi.fn();
 
@@ -45,6 +48,9 @@ vi.mock("../../api", () => ({
   fetchCursorCliStatus: (...args: unknown[]) => mockFetchCursorCliStatus(...args),
   setCursorCliEnabled: (...args: unknown[]) => mockSetCursorCliEnabled(...args),
   setCursorCliBinaryPath: (...args: unknown[]) => mockSetCursorCliBinaryPath(...args),
+  fetchAgyCliStatus: (...args: unknown[]) => mockFetchAgyCliStatus(...args),
+  setAgyCliEnabled: (...args: unknown[]) => mockSetAgyCliEnabled(...args),
+  setAgyCliBinaryPath: (...args: unknown[]) => mockSetAgyCliBinaryPath(...args),
 }));
 
 // Mock CustomModelDropdown since it has complex portal behavior
@@ -257,6 +263,14 @@ beforeEach(() => {
     ready: false,
   });
   mockSetCursorCliEnabled.mockResolvedValue({ enabled: true, restartRequired: false });
+  mockFetchAgyCliStatus.mockResolvedValue({
+    binary: { available: true, version: "agy 1.1.27", binaryPath: "/usr/local/bin/agy", probeDurationMs: 8 },
+    enabled: false,
+    extension: null,
+    ready: false,
+  });
+  mockSetAgyCliEnabled.mockResolvedValue({ enabled: true, restartRequired: false });
+  mockSetAgyCliBinaryPath.mockResolvedValue({ enabled: false, restartRequired: false });
   mockConfirm.mockResolvedValue(true);
   // Default to no persisted state (start at ai-setup)
   mockGetOnboardingState.mockReturnValue(null);

@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { GIT_INSTALL_URL, isGhAvailable, isGhAuthenticated, probeGitCliStatus } from "@fusion/core";
 import { probeClaudeCli } from "../claude-cli-probe.js";
 import { probeDroidCli } from "../droid-cli-probe.js";
-import { probeCursorCliProvider, probeGrokCliProvider, probeOmpCliProvider } from "../runtime-provider-probes.js";
+import { probeCursorCliProvider, probeGrokCliProvider, probeOmpCliProvider, probeAgyCliProvider } from "../runtime-provider-probes.js";
 import { probeLlamaCpp } from "../llama-cpp-probe.js";
 import { ApiError, badRequest, conflict } from "../api-error.js";
 import { clearUsageCache } from "../usage.js";
@@ -70,6 +70,7 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
     "cursor-cli",
     "grok-cli",
     "omp-cli",
+    "agy-cli",
     "llama-cpp",
   ]);
 
@@ -134,6 +135,27 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
 
   async function probeOmpCliWithStoredBinary() {
     return probeOmpCliProvider({ binaryPath: await readOmpCliBinaryPath() });
+  }
+
+  /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  Mirrors Cursor/Grok/OMP binary path helpers so auth provider list, status,
+  enable, and path-save validation probe the same trimmed global Antigravity
+  CLI binary override before falling back to PATH candidates. The agy settings
+  keys are `agyCliEnabled` / `agyCliBinaryPath` (not the `use<Cli>` pattern).
+  */
+  function normalizeAgyCliBinaryPath(value: unknown): string | undefined {
+    return typeof value === "string" ? value.trim() || undefined : undefined;
+  }
+
+  async function readAgyCliBinaryPath(): Promise<string | undefined> {
+    if (!store) return undefined;
+    const globalSettings = await store.getGlobalSettingsStore().getSettings();
+    return normalizeAgyCliBinaryPath((globalSettings as Record<string, unknown>).agyCliBinaryPath);
+  }
+
+  async function probeAgyCliWithStoredBinary() {
+    return probeAgyCliProvider({ binaryPath: await readAgyCliBinaryPath() });
   }
 
   /**
@@ -925,6 +947,35 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
         });
       }
 
+      /*
+      FNXC:AgyCli 2026-09-06-00:00:
+      Inject the synthetic "Antigravity — via Antigravity CLI" provider,
+      mirroring the cursor-cli/grok-cli/omp-cli injection above EXACTLY —
+      `authenticated` derives from toggle + binary availability only. The
+      `agy` CLI owns its credentials in the OS keyring; Fusion cannot see
+      them, so requiring a Fusion-visible credential produced false "not
+      authenticated" states. Authentication is inferred from `agy models`
+      (see the plugin's probe) and surfaced via the status route's
+      `binary.authenticated` field — it never gates this `authenticated` flag.
+      The agy settings key is `agyCliEnabled` (not `useAgyCli`).
+      */
+      if (store) {
+        let agyEnabled = false;
+        try {
+          const globalSettings = await store.getGlobalSettingsStore().getSettings();
+          agyEnabled = (globalSettings as Record<string, unknown>).agyCliEnabled === true;
+        } catch {
+          // best effort
+        }
+        const agyBinary = await probeAgyCliWithStoredBinary();
+        providers.push({
+          id: "agy-cli",
+          name: "Antigravity — via Antigravity CLI",
+          authenticated: agyEnabled && agyBinary.available,
+          type: "cli" as const,
+        });
+      }
+
       // Inject synthetic llama.cpp provider.
       if (store) {
         let llamaEnabled = false;
@@ -1528,6 +1579,94 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
         try {
           const globalSettings = await store.getGlobalSettingsStore().getSettings();
           enabled = (globalSettings as Record<string, unknown>).useOmpCli === true;
+        } catch {
+          // best effort
+        }
+      }
+      res.json({ binary, enabled, binaryPath, extension: null, ready: enabled && binary.available });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) throw err;
+      rethrowAsApiError(err);
+    }
+  });
+
+  /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  POST /auth/agy-cli mirrors POST /auth/cursor-cli's enable/disable + binaryPath
+  contract exactly. "Cannot enable" only requires the binary to be available
+  (mirroring Cursor/Grok/OMP) — agy owns its credentials in the OS keyring, so
+  authentication is not required to enable routing. The agy settings keys are
+  `agyCliEnabled` / `agyCliBinaryPath` (not the `use<Cli>` pattern).
+  */
+  router.post("/auth/agy-cli", async (req, res) => {
+    try {
+      if (!store) {
+        throw new ApiError(500, "Settings store unavailable");
+      }
+      const requestedEnabled = req.body?.enabled;
+      const hasEnabledPatch = Object.prototype.hasOwnProperty.call(req.body ?? {}, "enabled");
+      const requestedBinaryPath = req.body?.binaryPath;
+      const hasBinaryPathPatch = Object.prototype.hasOwnProperty.call(req.body ?? {}, "binaryPath");
+      if (!hasEnabledPatch && !hasBinaryPathPatch) {
+        throw badRequest("enabled or binaryPath is required");
+      }
+      if (hasEnabledPatch && typeof requestedEnabled !== "boolean") {
+        throw badRequest("enabled must be a boolean");
+      }
+      if (hasBinaryPathPatch && requestedBinaryPath !== null && typeof requestedBinaryPath !== "string") {
+        throw badRequest("binaryPath must be a string or null");
+      }
+
+      const currentSettings = await store.getGlobalSettingsStore().getSettings();
+      const enabled = hasEnabledPatch ? requestedEnabled : (currentSettings as Record<string, unknown>).agyCliEnabled === true;
+      const currentBinaryPath = normalizeAgyCliBinaryPath((currentSettings as Record<string, unknown>).agyCliBinaryPath);
+      const nextBinaryPath = hasBinaryPathPatch
+        ? normalizeAgyCliBinaryPath(requestedBinaryPath)
+        : currentBinaryPath;
+
+      if (hasBinaryPathPatch && nextBinaryPath) {
+        const binary = await probeAgyCliProvider({ binaryPath: nextBinaryPath });
+        if (!binary.available || !binary.usingConfiguredBinaryPath) {
+          throw new ApiError(400, `Cannot save Antigravity CLI binary path: ${binary.reason ?? "configured binary not available"}`);
+        }
+      }
+
+      if (enabled) {
+        const binary = await probeAgyCliProvider({ binaryPath: nextBinaryPath });
+        if (!binary.available) {
+          throw new ApiError(400, `Cannot enable Antigravity CLI routing: ${binary.reason ?? "agy binary not available"}`);
+        }
+      }
+
+      const patch: Record<string, unknown> = {};
+      if (hasEnabledPatch) {
+        patch.agyCliEnabled = enabled;
+      }
+      if (hasBinaryPathPatch) {
+        patch.agyCliBinaryPath = nextBinaryPath ?? null;
+      }
+      const settings = await store.updateGlobalSettings(patch);
+      invalidateAllGlobalSettingsCaches();
+      res.json({
+        enabled: (settings as Record<string, unknown>).agyCliEnabled === true,
+        binaryPath: normalizeAgyCliBinaryPath((settings as Record<string, unknown>).agyCliBinaryPath),
+        restartRequired: false,
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) throw err;
+      rethrowAsApiError(err);
+    }
+  });
+
+  router.get("/providers/agy-cli/status", async (_req, res) => {
+    try {
+      const binaryPath = await readAgyCliBinaryPath();
+      const binary = await probeAgyCliProvider({ binaryPath });
+      let enabled = false;
+      if (store) {
+        try {
+          const globalSettings = await store.getGlobalSettingsStore().getSettings();
+          enabled = (globalSettings as Record<string, unknown>).agyCliEnabled === true;
         } catch {
           // best effort
         }

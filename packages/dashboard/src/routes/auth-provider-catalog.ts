@@ -32,9 +32,9 @@
  * Kept as a small hand-maintained mirror; update alongside
  * `provider-auth.ts`'s `BUILT_IN_API_KEY_PROVIDERS` when providers are
  * added/removed there. The synthetic CLI providers (`claude-cli`,
- * `droid-cli`, `cursor-cli`, `llama-cpp`) are NOT part of this catalog — they
- * stay on their existing dedicated injection path in
- * `register-auth-routes.ts`.
+ * `droid-cli`, `cursor-cli`, `grok-cli`, `omp-cli`, `agy-cli`, `llama-cpp`)
+ * are NOT part of this catalog — they stay on their existing dedicated
+ * injection path in `register-auth-routes.ts`.
  */
 
 export interface AuthProviderCatalogEntry {

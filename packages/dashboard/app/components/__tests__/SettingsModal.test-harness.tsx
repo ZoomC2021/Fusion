@@ -85,6 +85,9 @@ export const mockSetDroidCliEnabled = vi.fn();
 export const mockFetchCursorCliStatus = vi.fn();
 export const mockSetCursorCliEnabled = vi.fn();
 export const mockSetCursorCliBinaryPath = vi.fn();
+export const mockFetchAgyCliStatus = vi.fn();
+export const mockSetAgyCliEnabled = vi.fn();
+export const mockSetAgyCliBinaryPath = vi.fn();
 export const mockUseWorkspaceFileBrowser = vi.fn();
 export const mockConfirm = vi.fn();
 export const mockUseWorktrunkInstallStatus = vi.fn();
@@ -508,6 +511,15 @@ export function installSettingsModalEnv(options?: { advancedSettings?: boolean }
     });
     mockSetCursorCliEnabled.mockResolvedValue({ enabled: true, restartRequired: false });
     mockSetCursorCliBinaryPath.mockResolvedValue({ enabled: false, restartRequired: false });
+    mockFetchAgyCliStatus.mockResolvedValue({
+      binary: { available: true, version: "agy 1.1.27", binaryPath: "/usr/local/bin/agy", probeDurationMs: 8 },
+      enabled: false,
+      binaryPath: undefined,
+      extension: null,
+      ready: false,
+    });
+    mockSetAgyCliEnabled.mockResolvedValue({ enabled: true, restartRequired: false });
+    mockSetAgyCliBinaryPath.mockResolvedValue({ enabled: false, restartRequired: false });
     mockUseWorkspaceFileBrowser.mockReturnValue({
       entries: [],
       currentPath: ".",

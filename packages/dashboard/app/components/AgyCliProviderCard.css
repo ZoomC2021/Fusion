@@ -1,0 +1,71 @@
+.agy-cli-provider-card .auth-provider-cli-actions,
+.agy-cli-provider-card .onboarding-provider-card__actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Compact card body must be inset to match `.auth-provider-header`'s horizontal padding
+(`var(--space-sm) var(--space-md)`), mirroring `.auth-provider-cli-details-body` used by the
+Claude CLI card and `.cursor-cli-provider-card__body` (FN-7695). Without this, the status line
+and binary-path control render flush against the card's left/right/bottom edges.
+*/
+.agy-cli-provider-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-sm);
+}
+
+.agy-cli-binary-path-control {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Use --text-muted for secondary labels because --text-secondary is an undefined deprecated alias in both themes (mirrors FN-8043).
+*/
+.agy-cli-binary-path-label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.agy-cli-binary-path-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.agy-cli-binary-path-input {
+  min-width: 0;
+  flex: 1 1 18rem;
+  height: 2rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  padding: 0 var(--space-sm);
+}
+
+@media (max-width: 768px) {
+  .agy-cli-provider-card .auth-provider-cli-actions,
+  .agy-cli-provider-card .onboarding-provider-card__actions,
+  .agy-cli-binary-path-row {
+    flex-wrap: wrap;
+  }
+
+  .agy-cli-binary-path-row .btn,
+  .agy-cli-binary-path-input {
+    width: 100%;
+  }
+
+  /* FNXC:AgyCli 2026-09-06-00:00: mirror `.auth-provider-cli-details-body`'s 14px mobile inset. */
+  .agy-cli-provider-card__body {
+    padding: 0 var(--space-sm) var(--space-sm);
+  }
+}

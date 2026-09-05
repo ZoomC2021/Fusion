@@ -1015,6 +1015,12 @@ describe("GET /auth/status", () => {
       reason: "mocked unavailable",
       probeDurationMs: 0,
     });
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: false,
+      authenticated: false,
+      reason: "mocked unavailable",
+      probeDurationMs: 0,
+    });
     vi.spyOn(llamaCppProbeModule, "probeLlamaCpp").mockResolvedValue({
       available: false,
       reason: "mocked unavailable",
@@ -1122,7 +1128,7 @@ describe("GET /auth/status", () => {
     expect(res.status).toBe(200);
     // Filter out synthetic CLI providers — they have dedicated route tests.
     // Structural assertions here are about OAuth + API-key paths only.
-    const providers = res.body.providers.filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "llama-cpp");
+    const providers = res.body.providers.filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "agy-cli" && p.id !== "llama-cpp");
     /*
     FN-7625: the static catalog (anthropic-subscription/github-copilot/openai-codex
     OAuth + the full API-key catalog) is always present, unioned with whatever the
@@ -1241,7 +1247,7 @@ describe("GET /auth/status", () => {
     const res = await GET(app, "/api/auth/status");
 
     expect(res.status).toBe(200);
-    const providers = res.body.providers.filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "llama-cpp");
+    const providers = res.body.providers.filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "agy-cli" && p.id !== "llama-cpp");
     /*
     FN-7625: catalog ids remain present even though storage only reported a
     narrow subset, and a storage-reported id NOT in the catalog ("acme-extension")
@@ -1736,7 +1742,7 @@ describe("GET /auth/status", () => {
 
     function nonCliProviderIds(res: any): string[] {
       return res.body.providers
-        .filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "llama-cpp")
+        .filter((p: any) => p.id !== "claude-cli" && p.id !== "droid-cli" && p.id !== "cursor-cli" && p.id !== "grok-cli" && p.id !== "omp-cli" && p.id !== "agy-cli" && p.id !== "llama-cpp")
         .map((p: any) => p.id);
     }
 
@@ -2036,6 +2042,13 @@ describe("Droid CLI auth routes", () => {
     });
     // FNXC:OmpAcp 2026-07-13-22:50: stub omp probe so /auth/status does not spawn real omp.
     vi.spyOn(runtimeProviderProbesModule, "probeOmpCliProvider").mockResolvedValue({
+      available: false,
+      authenticated: false,
+      reason: "mocked unavailable",
+      probeDurationMs: 0,
+    });
+    // FNXC:AgyCli 2026-09-06-00:00: stub agy probe so /auth/status does not spawn real agy.
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
       available: false,
       authenticated: false,
       reason: "mocked unavailable",
@@ -5950,6 +5963,12 @@ describe("llama.cpp auth routes", () => {
       reason: "mocked unavailable",
       probeDurationMs: 0,
     });
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: false,
+      authenticated: false,
+      reason: "mocked unavailable",
+      probeDurationMs: 0,
+    });
   });
 
   it("enables llama.cpp when probe passes", async () => {
@@ -6163,6 +6182,196 @@ describe("llama.cpp auth routes", () => {
     const res = await GET(buildApp(), "/api/providers/omp-cli/status");
     expect(res.status).toBe(200);
     expect(res.body.ready).toBe(true);
+    expect(res.body.enabled).toBe(true);
+  });
+
+  /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  Antigravity CLI (agy-cli) auth route coverage — mirrors the cursor-cli /
+  omp-cli route tests above. The agy settings keys are `agyCliEnabled` /
+  `agyCliBinaryPath` (not the `use<Cli>` pattern). Enable requires only the
+  binary to be available; agy owns its credentials in the OS keyring.
+  */
+  it("POST /auth/agy-cli enables when agy binary is available", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      probeDurationMs: 8,
+    });
+    store.updateGlobalSettings = vi.fn().mockResolvedValue({ agyCliEnabled: true });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ enabled: true }), {
+      "Content-Type": "application/json",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ enabled: true, restartRequired: false });
+    expect(store.updateGlobalSettings).toHaveBeenCalledWith({ agyCliEnabled: true });
+  });
+
+  it("POST /auth/agy-cli saves a validated binary path without toggling", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      binaryPath: "/opt/agy",
+      configuredBinaryPath: "/opt/agy",
+      usingConfiguredBinaryPath: true,
+      probeDurationMs: 8,
+    });
+    store.getGlobalSettingsStore = vi.fn().mockReturnValue({
+      ...createMockGlobalSettingsStore(),
+      getSettings: vi.fn().mockResolvedValue({ agyCliEnabled: false }),
+    });
+    store.updateGlobalSettings = vi.fn().mockResolvedValue({ agyCliEnabled: false, agyCliBinaryPath: "/opt/agy" });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ binaryPath: "  /opt/agy  " }), {
+      "Content-Type": "application/json",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ enabled: false, binaryPath: "/opt/agy", restartRequired: false });
+    expect(runtimeProviderProbesModule.probeAgyCliProvider).toHaveBeenCalledWith({ binaryPath: "/opt/agy" });
+    expect(store.updateGlobalSettings).toHaveBeenCalledWith({ agyCliBinaryPath: "/opt/agy" });
+  });
+
+  it("POST /auth/agy-cli rejects invalid binaryPath values", async () => {
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ enabled: false, binaryPath: 123 }), {
+      "Content-Type": "application/json",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /auth/agy-cli rejects configured paths that only succeed via PATH fallback", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      binaryPath: "/usr/local/bin/agy",
+      configuredBinaryPath: "/missing/agy",
+      usingConfiguredBinaryPath: false,
+      probeDurationMs: 8,
+    });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ binaryPath: "/missing/agy" }), {
+      "Content-Type": "application/json",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /auth/agy-cli clears the binary path and restores PATH auto-detection", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      probeDurationMs: 8,
+    });
+    store.getGlobalSettingsStore = vi.fn().mockReturnValue({
+      ...createMockGlobalSettingsStore(),
+      getSettings: vi.fn().mockResolvedValue({ agyCliEnabled: true, agyCliBinaryPath: "/opt/agy" }),
+    });
+    store.updateGlobalSettings = vi.fn().mockResolvedValue({ agyCliEnabled: true });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ binaryPath: "   " }), {
+      "Content-Type": "application/json",
+    });
+
+    expect(res.status).toBe(200);
+    expect(runtimeProviderProbesModule.probeAgyCliProvider).toHaveBeenCalledWith({ binaryPath: undefined });
+    expect(store.updateGlobalSettings).toHaveBeenCalledWith({ agyCliBinaryPath: null });
+  });
+
+  it("POST /auth/agy-cli enables using the stored binary override", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      binaryPath: "/opt/agy",
+      configuredBinaryPath: "/opt/agy",
+      usingConfiguredBinaryPath: true,
+      probeDurationMs: 8,
+    });
+    store.getGlobalSettingsStore = vi.fn().mockReturnValue({
+      ...createMockGlobalSettingsStore(),
+      getSettings: vi.fn().mockResolvedValue({ agyCliBinaryPath: "/opt/agy" }),
+    });
+    store.updateGlobalSettings = vi.fn().mockResolvedValue({ agyCliEnabled: true, agyCliBinaryPath: "/opt/agy" });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ enabled: true }), {
+      "Content-Type": "application/json",
+    });
+
+    expect(res.status).toBe(200);
+    expect(runtimeProviderProbesModule.probeAgyCliProvider).toHaveBeenCalledWith({ binaryPath: "/opt/agy" });
+    expect(store.updateGlobalSettings).toHaveBeenCalledWith({ agyCliEnabled: true });
+  });
+
+  it("POST /auth/agy-cli returns 400 when enabling without binary", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: false,
+      authenticated: false,
+      reason: "mocked unavailable",
+      probeDurationMs: 0,
+    });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ enabled: true }), {
+      "Content-Type": "application/json",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /auth/agy-cli disables without probing binary", async () => {
+    const probeSpy = vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider");
+    probeSpy.mockClear();
+    store.updateGlobalSettings = vi.fn().mockResolvedValue({ agyCliEnabled: false });
+
+    const res = await REQUEST(buildApp(), "POST", "/api/auth/agy-cli", JSON.stringify({ enabled: false }), {
+      "Content-Type": "application/json",
+    });
+
+    expect(res.status).toBe(200);
+    expect(probeSpy).not.toHaveBeenCalled();
+    expect(store.updateGlobalSettings).toHaveBeenCalledWith({ agyCliEnabled: false });
+  });
+
+  it("GET /providers/agy-cli/status returns readiness from toggle and binary", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: true,
+      authenticated: true,
+      version: "agy 1.1.27",
+      binaryPath: "/opt/agy",
+      configuredBinaryPath: "/opt/agy",
+      usingConfiguredBinaryPath: true,
+      probeDurationMs: 8,
+    });
+    store.getGlobalSettingsStore = vi.fn().mockReturnValue({
+      ...createMockGlobalSettingsStore(),
+      getSettings: vi.fn().mockResolvedValue({ agyCliEnabled: true, agyCliBinaryPath: "/opt/agy" }),
+    });
+
+    const res = await GET(buildApp(), "/api/providers/agy-cli/status");
+    expect(res.status).toBe(200);
+    expect(res.body.ready).toBe(true);
+    expect(res.body.enabled).toBe(true);
+    expect(runtimeProviderProbesModule.probeAgyCliProvider).toHaveBeenCalledWith({ binaryPath: "/opt/agy" });
+  });
+
+  it("GET /providers/agy-cli/status returns ready false when binary unavailable", async () => {
+    vi.spyOn(runtimeProviderProbesModule, "probeAgyCliProvider").mockResolvedValue({
+      available: false,
+      authenticated: false,
+      reason: "mocked unavailable",
+      probeDurationMs: 0,
+    });
+    store.getGlobalSettingsStore = vi.fn().mockReturnValue({
+      ...createMockGlobalSettingsStore(),
+      getSettings: vi.fn().mockResolvedValue({ agyCliEnabled: true }),
+    });
+
+    const res = await GET(buildApp(), "/api/providers/agy-cli/status");
+    expect(res.status).toBe(200);
+    expect(res.body.ready).toBe(false);
     expect(res.body.enabled).toBe(true);
   });
 

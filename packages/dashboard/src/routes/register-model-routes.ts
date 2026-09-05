@@ -9,6 +9,7 @@ import { getGrokPickerModels, GROK_PICKER_PROVIDER_ID } from "../grok-model-cach
 import { getDroidPickerModels, DROID_PICKER_PROVIDER_ID } from "../droid-model-cache.js";
 import { getClaudePickerModels, CLAUDE_PICKER_PROVIDER_ID } from "../claude-model-cache.js";
 import { getOmpPickerModels, OMP_PICKER_PROVIDER_ID } from "../omp-model-cache.js";
+import { getAgyPickerModels, AGY_PICKER_PROVIDER_ID } from "../agy-model-cache.js";
 import { getHermesPickerModels, HERMES_PICKER_PROVIDER_ID } from "../hermes-model-cache.js";
 import {
   invalidateModelRegistryRefreshCache,
@@ -292,6 +293,8 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
     let grokCliBinaryPath: string | undefined;
     let useOmpCli = false;
     let ompCliBinaryPath: string | undefined;
+    let agyCliEnabled = false;
+    let agyCliBinaryPath: string | undefined;
     let resolvedPlanningProvider: string | undefined;
     let resolvedPlanningModelId: string | undefined;
     let customProviders: CustomProvider[] = [];
@@ -339,6 +342,16 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
         const rawOmpCliBinaryPath = (globalSettings as Record<string, unknown>).ompCliBinaryPath;
         ompCliBinaryPath =
           typeof rawOmpCliBinaryPath === "string" ? rawOmpCliBinaryPath.trim() || undefined : undefined;
+        /*
+        FNXC:AgyCli 2026-09-06-00:00:
+        agyCliEnabled toggle + agyCliBinaryPath override for model-picker discovery
+        (mirrors Grok/Cursor/OMP). The agy settings key is `agyCliEnabled` (not
+        `useAgyCli`).
+        */
+        agyCliEnabled = (globalSettings as Record<string, unknown>).agyCliEnabled === true;
+        const rawAgyCliBinaryPath = (globalSettings as Record<string, unknown>).agyCliBinaryPath;
+        agyCliBinaryPath =
+          typeof rawAgyCliBinaryPath === "string" ? rawAgyCliBinaryPath.trim() || undefined : undefined;
         customProviders = globalSettings.customProviders ?? [];
 
         /*
@@ -476,6 +489,9 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       }
       if (!useOmpCli) {
         models = models.filter((m) => m.provider !== "omp-cli");
+      }
+      if (!agyCliEnabled) {
+        models = models.filter((m) => m.provider !== "agy-cli");
       }
 
       /*
@@ -646,6 +662,38 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
         }
       }
 
+      /*
+      FNXC:AgyCli 2026-09-06-00:00:
+      Additively surface Antigravity CLI-discovered models (`agy models`) under
+      the stable "agy-cli" provider id, mirroring the cursor-cli/grok-cli/omp-cli
+      merge above. agy has its own settings toggle (agyCliEnabled) — the toggle IS
+      the signal here, so discovery is only attempted when agyCliEnabled is true.
+      Fetched through getAgyPickerModels, backed by a short-TTL, single-flight
+      cache keyed by binary path — this call NEVER spawns agy per request, and
+      NEVER throws (a missing/failed/unavailable binary degrades to []). agy rows
+      are merged respecting the existing seenModelKeys provider/id dedup so an
+      existing row always wins over a colliding agy row — purely additive, must
+      never displace, overwrite, or filter out an existing row.
+      */
+      if (agyCliEnabled) {
+        // getAgyPickerModels never throws by contract (see agy-model-cache.ts),
+        // but this try/catch is a defensive belt so an agy discovery failure can
+        // never reject the /models handler or drop existing rows — degrade to
+        // zero agy rows instead.
+        try {
+          const agyModels = await getAgyPickerModels({ binaryPath: agyCliBinaryPath });
+          for (const agyModel of agyModels) {
+            const key = `${agyModel.provider}/${agyModel.id}`;
+            if (seenModelKeys.has(key)) continue;
+            seenModelKeys.add(key);
+            models.push(agyModel);
+          }
+        } catch (agyErr: unknown) {
+          const message = agyErr instanceof Error ? agyErr.message : String(agyErr);
+          runtimeLogger.child("models").warn(`Failed to load agy-cli models: ${message}`);
+        }
+      }
+
       // Filter to only providers the user has explicitly configured in Fusion.
       // getAvailable() checks supplemental credential stores (Codex CLI,
       // Claude Code, env vars) which surface providers the user may not
@@ -683,6 +731,12 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       if (useGrokCli) configuredProviders.add(GROK_PICKER_PROVIDER_ID);
       // FNXC:OmpAcp 2026-07-13-22:50: allow-list omp-cli when toggle is on.
       if (useOmpCli) configuredProviders.add(OMP_PICKER_PROVIDER_ID);
+      // FNXC:AgyCli 2026-09-06-00:00: allow-list "agy-cli" through the final
+      // filter whenever the toggle is on, mirroring cursor-cli/grok-cli/omp-cli
+      // above. agy's own toggle IS the signal, independent of any
+      // auth.json/models.json agy-cli entry and independent of whether
+      // discovery actually contributed rows.
+      if (agyCliEnabled) configuredProviders.add(AGY_PICKER_PROVIDER_ID);
       // FNXC:ModelCatalog 2026-07-07-09:05 (FN-7636): only allow-list "hermes"
       // through the final filter when Hermes rows were actually contributed
       // above, mirroring the useClaudeCli/useDroidCli toggle pattern (Hermes

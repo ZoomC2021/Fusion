@@ -668,6 +668,22 @@ export default defineConfig({
         __dirname,
         "../../plugins/fusion-plugin-omp-runtime/src/index.ts",
       ),
+      /*
+      FNXC:AgyCli 2026-09-06-00:00:
+      runtime-provider-probes.ts imports probeAgyBinary/discoverAgyProviderModels from
+      @fusion-plugin-examples/agy-runtime (mirroring the Cursor/Grok/OMP aliases above).
+      Without these source aliases, Vite tries to resolve the package's dist/ exports which
+      don't exist in a source checkout, causing every dashboard test that transitively imports
+      the runtime provider to fail with "Failed to resolve entry for package".
+      */
+      "@fusion-plugin-examples/agy-runtime/probe": resolve(
+        __dirname,
+        "../../plugins/fusion-plugin-agy-runtime/src/probe.ts",
+      ),
+      "@fusion-plugin-examples/agy-runtime": resolve(
+        __dirname,
+        "../../plugins/fusion-plugin-agy-runtime/src/index.ts",
+      ),
       "@fusion-plugin-examples/todos/dashboard-view": resolve(
         __dirname,
         "../../plugins/fusion-plugin-todos/src/dashboard-view.tsx",

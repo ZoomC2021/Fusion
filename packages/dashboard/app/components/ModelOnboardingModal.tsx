@@ -28,6 +28,7 @@ import { CustomModelDropdown } from "./CustomModelDropdown";
 import { ProviderIcon } from "./ProviderIcon";
 import { ClaudeCliProviderCard } from "./ClaudeCliProviderCard";
 import { CursorCliProviderCard } from "./CursorCliProviderCard";
+import { AgyCliProviderCard } from "./AgyCliProviderCard";
 import { LlamaCppProviderCard } from "./LlamaCppProviderCard";
 import { LoginInstructions } from "./LoginInstructions";
 import { ProviderLoginDialog, type ProviderLoginPhase } from "./ProviderLoginDialog";
@@ -292,6 +293,7 @@ const ONBOARDING_CURATED_PROVIDER_FAMILY_ORDER = [
   "claude-cli",
   "droid-cli",
   "cursor-cli",
+  "agy-cli",
   "llama-cpp",
   "openai-codex",
   "openrouter",
@@ -2394,6 +2396,18 @@ export function ModelOnboardingModal({
     if (provider.id === "cursor-cli" && provider.type === "cli") {
       return (
         <CursorCliProviderCard
+          key={provider.id}
+          authenticated={provider.authenticated}
+          onToggled={() => {
+            void loadAuthStatus();
+          }}
+        />
+      );
+    }
+
+    if (provider.id === "agy-cli" && provider.type === "cli") {
+      return (
+        <AgyCliProviderCard
           key={provider.id}
           authenticated={provider.authenticated}
           onToggled={() => {

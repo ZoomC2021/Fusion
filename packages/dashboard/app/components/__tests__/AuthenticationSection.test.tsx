@@ -39,6 +39,11 @@ vi.mock("../CursorCliProviderCard", () => ({
     <div data-testid="cursor-cli-provider-card" data-authenticated={authenticated ? "true" : "false"} />
   ),
 }));
+vi.mock("../AgyCliProviderCard", () => ({
+  AgyCliProviderCard: ({ authenticated }: { authenticated: boolean }) => (
+    <div data-testid="agy-cli-provider-card" data-authenticated={authenticated ? "true" : "false"} />
+  ),
+}));
 vi.mock("../LlamaCppProviderCard", () => ({
   LlamaCppProviderCard: ({ authenticated }: { authenticated: boolean }) => (
     <div data-testid="llama-cpp-provider-card" data-authenticated={authenticated ? "true" : "false"} />
@@ -52,6 +57,7 @@ function authCardOrder(groupLabel: "Authenticated" | "Available") {
       const element = child as HTMLElement;
       if (element.dataset.testid === "claude-cli-provider-card") return "claude-cli";
       if (element.dataset.testid === "cursor-cli-provider-card") return "cursor-cli";
+      if (element.dataset.testid === "agy-cli-provider-card") return "agy-cli";
       if (element.dataset.testid === "llama-cpp-provider-card") return "llama-cpp";
       const icon = element.querySelector<HTMLElement>("[data-testid^='auth-provider-icon-']");
       return icon?.dataset.testid?.replace("auth-provider-icon-", "") ?? null;

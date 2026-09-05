@@ -49,6 +49,7 @@ const BUNDLED_PLUGIN_IDS = new Set([
   "fusion-plugin-grok-runtime",
   "fusion-plugin-claude-runtime",
   "fusion-plugin-omp-runtime",
+  "fusion-plugin-agy-runtime",
   "fusion-plugin-cli-printing-press",
   "fusion-plugin-compound-engineering",
   "fusion-plugin-quality",

@@ -119,12 +119,21 @@ importers:
         specifier: ^8.18.0
         version: 8.21.1
     devDependencies:
+      '@fusion-plugin-examples/droid-runtime':
+        specifier: workspace:*
+        version: link:../../plugins/fusion-plugin-droid-runtime
       '@fusion/core':
         specifier: workspace:*
         version: link:../core
       '@fusion/dashboard':
         specifier: workspace:*
         version: link:../dashboard
+      '@fusion/devin-cli':
+        specifier: workspace:*
+        version: link:../devin-cli
+      '@fusion/droid-cli':
+        specifier: workspace:*
+        version: link:../droid-cli
       '@fusion/engine':
         specifier: workspace:*
         version: link:../engine
@@ -542,6 +551,8 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.1)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@6.4.1(@types/node@25.9.5)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/devin-cli: {}
 
   packages/droid-cli:
     dependencies:

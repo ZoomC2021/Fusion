@@ -101,10 +101,13 @@
   "devDependencies": {
     "@fusion/core": "workspace:*",
     "@fusion/dashboard": "workspace:*",
+    "@fusion/devin-cli": "workspace:*",
+    "@fusion/droid-cli": "workspace:*",
     "@fusion/engine": "workspace:*",
     "@fusion/i18n": "workspace:*",
     "@fusion/pi-claude-cli": "workspace:*",
     "@fusion/pi-llama-cpp": "workspace:*",
+    "@fusion-plugin-examples/droid-runtime": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/ws": "^8.5.0",

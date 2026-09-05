@@ -702,6 +702,14 @@ export interface GlobalSettings {
    * Operators need a global machine-local Cursor CLI executable override when PATH discovery resolves the wrong `cursor-agent`, `cursor`, `.cmd`, or `.bat` shim. Blank/undefined means Fusion must keep auto-detecting through PATH candidates.
    */
   cursorCliBinaryPath?: string;
+  /** When true, enable Antigravity CLI model-provider support (provider ID: `agy-cli`)
+   *  through an operator-local Antigravity CLI (`agy`) installation. */
+  agyCliEnabled?: boolean;
+  /**
+   * FNXC:AgyRuntime 2026-09-06:
+   * Operators need a global machine-local Antigravity CLI executable override when PATH discovery resolves the wrong `agy`/`.cmd`/`.bat` shim. Blank/undefined means Fusion must keep auto-detecting through PATH candidates.
+   */
+  agyCliBinaryPath?: string;
   /** When true, enable Grok CLI model-provider support (provider ID: `grok-cli`)
    *  through an operator-local Grok CLI installation. Grok is API-key auth (not
    *  OAuth/session) — see `grokCliBinaryPath` below and the plugin's probe. */

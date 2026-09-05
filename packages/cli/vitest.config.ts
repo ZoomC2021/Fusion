@@ -219,6 +219,18 @@ export default defineConfig({
         replacement: resolve(__dirname, "../../plugins/fusion-plugin-omp-runtime/src/index.ts"),
       },
       /*
+      FNXC:AgyRuntime 2026-09-06:
+      runtime-provider-probes imports @fusion-plugin-examples/agy-runtime; alias source for checkout tests.
+      */
+      {
+        find: /^@fusion-plugin-examples\/agy-runtime\/probe$/,
+        replacement: resolve(__dirname, "../../plugins/fusion-plugin-agy-runtime/src/probe.ts"),
+      },
+      {
+        find: /^@fusion-plugin-examples\/agy-runtime$/,
+        replacement: resolve(__dirname, "../../plugins/fusion-plugin-agy-runtime/src/index.ts"),
+      },
+      /*
       FNXC:CliTests 2026-07-18-09:15:
       runtime-provider-probes imports @fusion-plugin-examples/claude-runtime for probe/model
       discovery only. Alias the package root to probes-entry (not full index) so CLI tests do

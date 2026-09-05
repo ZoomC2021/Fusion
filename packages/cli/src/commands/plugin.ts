@@ -67,6 +67,14 @@ export const BUILTIN_PLUGINS: BuiltinPluginCatalogEntry[] = [
     experimental: true,
   },
   {
+    id: "fusion-plugin-agy-runtime",
+    name: "Antigravity CLI Runtime",
+    description: "Runtime provider for Antigravity CLI (agy) execution via supervised stream-json transport.",
+    category: "runtime",
+    path: "./plugins/fusion-plugin-agy-runtime",
+    experimental: true,
+  },
+  {
     id: "fusion-plugin-dependency-graph",
     name: "Dependency Graph",
     description: "Dashboard plugin for task dependency graph visualization.",

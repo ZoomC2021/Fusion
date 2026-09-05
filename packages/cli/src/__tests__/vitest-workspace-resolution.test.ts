@@ -170,6 +170,7 @@ describe("CLI Vitest workspace resolution", () => {
           "claude",
           "omp",
           "paperclip",
+          "agy",
         ].map((runtime) => ({
           find: String(new RegExp(`^@fusion-plugin-examples/${runtime}-runtime$`)),
           replacement: join(workspaceRoot, "plugins", `fusion-plugin-${runtime}-runtime`, "src", "index.ts"),

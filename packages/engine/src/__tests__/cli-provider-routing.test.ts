@@ -41,6 +41,7 @@ describe("CLI provider routing census", () => {
   it.each([
     ["hermes", "hermes"],
     ["claude-cli", "claude"],
+    ["agy-cli", "agy"],
     ["omp-cli", "omp"],
   ])("derives %s and rejects absent or throwing runtime lookup", (provider, runtimeId) => {
     expect(deriveCliRuntimeHint({ runtimeOptions: options({ defaultProvider: provider }), pluginRunner: runner(true) as never, grokApiKeyVisible: false })).toBe(runtimeId);
@@ -54,10 +55,12 @@ describe("CLI provider routing census", () => {
     expect(() => assertExplicitCliRuntimeHint({ runtimeHint: "grok", runtimeOptions: options({ defaultProvider: "grok-cli" }), pluginRunner: runner(false) as never })).not.toThrow();
   });
 
-  it("drops unresolved Claude/Hermes fallback without changing the primary", () => {
-    const result = dropUnsupportedCliFallback(options({ defaultProvider: "openai", defaultModelId: "gpt", fallbackProvider: "hermes", fallbackModelId: "profile" }));
-    expect(result.droppedProvider).toBe("hermes");
-    expect(result.options).toMatchObject({ defaultProvider: "openai", defaultModelId: "gpt", fallbackProvider: undefined });
+  it("drops unresolved Claude/Hermes/Agy fallback without changing the primary", () => {
+    for (const fallbackProvider of ["hermes", "claude-cli", "agy-cli"]) {
+      const result = dropUnsupportedCliFallback(options({ defaultProvider: "openai", defaultModelId: "gpt", fallbackProvider, fallbackModelId: "profile" }));
+      expect(result.droppedProvider).toBe(fallbackProvider);
+      expect(result.options).toMatchObject({ defaultProvider: "openai", defaultModelId: "gpt", fallbackProvider: undefined });
+    }
   });
 
   it("promotes OMP fallback and strips only its prefix", () => {
@@ -81,6 +84,12 @@ describe("CLI provider routing census", () => {
   it("uses a provider-named Cursor failure when its required runtime is unavailable", () => {
     for (const pluginRunner of [undefined, runner(false), runner(false, true)]) {
       expect(() => deriveCliRuntimeHint({ runtimeOptions: options({ defaultProvider: "cursor-cli" }), pluginRunner: pluginRunner as never, grokApiKeyVisible: false })).toThrow(/Cursor CLI/);
+    }
+  });
+
+  it("uses a provider-named Antigravity CLI failure when its required runtime is unavailable", () => {
+    for (const pluginRunner of [undefined, runner(false), runner(false, true)]) {
+      expect(() => deriveCliRuntimeHint({ runtimeOptions: options({ defaultProvider: "agy-cli" }), pluginRunner: pluginRunner as never, grokApiKeyVisible: false })).toThrow(/Antigravity CLI/);
     }
   });
 });

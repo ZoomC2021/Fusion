@@ -40,6 +40,7 @@ COPY plugins/fusion-plugin-openclaw-runtime/package.json ./plugins/fusion-plugin
 COPY plugins/fusion-plugin-hermes-runtime/package.json ./plugins/fusion-plugin-hermes-runtime/package.json
 COPY plugins/fusion-plugin-droid-runtime/package.json ./plugins/fusion-plugin-droid-runtime/package.json
 COPY plugins/fusion-plugin-cursor-runtime/package.json ./plugins/fusion-plugin-cursor-runtime/package.json
+COPY plugins/fusion-plugin-agy-runtime/package.json ./plugins/fusion-plugin-agy-runtime/package.json
 COPY plugins/fusion-plugin-grok-runtime/package.json ./plugins/fusion-plugin-grok-runtime/package.json
 COPY plugins/fusion-plugin-claude-runtime/package.json ./plugins/fusion-plugin-claude-runtime/package.json
 COPY plugins/fusion-plugin-omp-runtime/package.json ./plugins/fusion-plugin-omp-runtime/package.json

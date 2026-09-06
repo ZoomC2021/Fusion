@@ -172,6 +172,30 @@ export interface GrokCliStatus {
 }
 
 /*
+FNXC:AgyCli 2026-09-06-00:00:
+Status shape for Settings → Antigravity CLI card. ready = enabled + binary available;
+auth under the OS keyring (inferred from `agy models` by the plugin probe). Mirrors
+CursorCliStatus/GrokCliStatus.
+*/
+export interface AgyCliStatus {
+  binary: {
+    available: boolean;
+    authenticated?: boolean;
+    version?: string;
+    binaryPath?: string;
+    configuredBinaryPath?: string;
+    usingConfiguredBinaryPath?: boolean;
+    diagnostics?: string[];
+    reason?: string;
+    probeDurationMs: number;
+  };
+  enabled: boolean;
+  binaryPath?: string;
+  extension: null;
+  ready: boolean;
+}
+
+/*
 FNXC:OmpAcp 2026-07-13-22:50:
 Status shape for Settings → Oh My Pi (omp) ACP card. ready = enabled + binary available; auth under ~/.omp.
 */
@@ -271,6 +295,14 @@ export function fetchGrokCliStatus(): Promise<GrokCliStatus> {
 
 export function fetchOmpCliStatus(): Promise<OmpCliStatus> {
   return api<OmpCliStatus>("/providers/omp-cli/status");
+}
+
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Client helpers for the Antigravity CLI status route (mirror Cursor/Grok/OMP).
+*/
+export function fetchAgyCliStatus(): Promise<AgyCliStatus> {
+  return api<AgyCliStatus>("/providers/agy-cli/status");
 }
 
 /** Probe llama.cpp server + setting + extension state. */
@@ -590,6 +622,29 @@ export function setOmpCliBinaryPath(
   binaryPath: string | null,
 ): Promise<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }> {
   return api<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }>("/auth/omp-cli", {
+    method: "POST",
+    body: JSON.stringify({ binaryPath }),
+  });
+}
+
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Enable/disable + binary-path helpers for the Antigravity CLI provider (mirror
+Cursor/Grok/OMP). The agy settings keys are `agyCliEnabled` / `agyCliBinaryPath`.
+*/
+export function setAgyCliEnabled(
+  enabled: boolean,
+): Promise<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }> {
+  return api<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }>("/auth/agy-cli", {
+    method: "POST",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export function setAgyCliBinaryPath(
+  binaryPath: string | null,
+): Promise<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }> {
+  return api<{ enabled: boolean; binaryPath?: string; restartRequired: boolean }>("/auth/agy-cli", {
     method: "POST",
     body: JSON.stringify({ binaryPath }),
   });

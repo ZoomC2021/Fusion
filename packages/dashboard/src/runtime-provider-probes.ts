@@ -36,6 +36,18 @@ import {
   type GrokBinaryStatus,
 } from "@fusion-plugin-examples/grok-runtime";
 
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Antigravity CLI (agy) runtime probe façade — same boundary pattern as
+Cursor/Grok so route handlers and tests mock here without importing the
+plugin package directly.
+*/
+import {
+  discoverAgyProviderModels,
+  probeAgyBinary,
+  type AgyBinaryStatus,
+} from "@fusion-plugin-examples/agy-runtime";
+
 import {
   discoverDroidProviderModels,
 } from "@fusion-plugin-examples/droid-runtime";
@@ -84,6 +96,7 @@ export type {
   GrokBinaryStatus,
   ClaudeBinaryStatus,
   OmpBinaryStatus,
+  AgyBinaryStatus,
   PaperclipAgentSummary,
   PaperclipCliDiscoveryResult,
   PaperclipCompanySummary,
@@ -118,6 +131,17 @@ export async function probeOmpCliProvider(opts?: { binaryPath?: string }): Promi
 
 export async function discoverOmpCliModels(opts?: { binaryPath?: string; timeoutMs?: number }) {
   return discoverOmpProviderModels(opts);
+}
+
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Probe the local Antigravity CLI (`agy`) binary. Mirrors probeCursorCliProvider/
+probeGrokCliProvider — never throws; failures are reported as `available: false`
+with a `reason` field so HTTP handlers can render the provider card without
+try/catch. Authentication is inferred from `agy models` (see the plugin's probe).
+*/
+export async function probeAgyCliProvider(opts?: { binaryPath?: string }): Promise<AgyBinaryStatus> {
+  return probeAgyBinary(opts);
 }
 
 /**
@@ -201,6 +225,23 @@ export interface DroidModelDiscoveryResult {
 }
 
 /**
+ * Result shape returned by the Antigravity CLI plugin's model-discovery contribution.
+ *
+ * FNXC:AgyCli 2026-09-06-00:00:
+ * Mirrors CursorModelDiscoveryResult/GrokModelDiscoveryResult above. `agy models`
+ * yields `{ id, label }` pairs with real labels (e.g. `gemini-3.7-flash-high` →
+ * "Gemini 3.7 Flash (High)"); reasoning/contextWindow are not reported by the
+ * CLI today, so they default to false/0 in the cache mapping. The shape is kept
+ * consistent with the other CLI providers for a future enrichment pass.
+ */
+export interface AgyModelDiscoveryResult {
+  models: Array<{ id: string; label?: string; reasoning?: boolean; contextWindow?: number }>;
+  source: string;
+  fallbackUsed: boolean;
+  reason?: string;
+}
+
+/**
  * Discover Droid CLI models via the `droid exec --help` catalog parse,
  * delegating to the Droid Runtime plugin's `discoverDroidProviderModels`
  * contribution.
@@ -220,6 +261,22 @@ export async function discoverDroidCliModels(opts?: {
   timeoutMs?: number;
 }): Promise<DroidModelDiscoveryResult> {
   return discoverDroidProviderModels(opts) as Promise<DroidModelDiscoveryResult>;
+}
+
+/**
+ * Discover Antigravity CLI models via `agy models`, delegating to the agy
+ * Runtime plugin's `discoverAgyProviderModels` cliProviders contribution.
+ *
+ * This is the stable mock/spy boundary for `agy-model-cache.ts` and its
+ * tests — never called directly per-request; see `getAgyPickerModels`.
+ * Never throws by contract of the underlying plugin function (a missing/
+ * unavailable binary resolves to `{ models: [], fallbackUsed: true, ... }`).
+ */
+export async function discoverAgyCliModels(opts?: {
+  binaryPath?: string;
+  timeoutMs?: number;
+}): Promise<AgyModelDiscoveryResult> {
+  return discoverAgyProviderModels(opts) as Promise<AgyModelDiscoveryResult>;
 }
 
 /**

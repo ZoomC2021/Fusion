@@ -837,6 +837,50 @@ function CursorCliIcon({ size, color, label = "Cursor — via Cursor CLI" }: { s
   );
 }
 
+/*
+FNXC:AgyCli 2026-09-06-00:00:
+Antigravity CLI provider mark — a simple text/glyph icon consistent with the
+existing CLI-badge pattern (Claude/Droid CLI). No new image asset is added per
+AGENTS.md guidance; the "A" monogram + terminal badge is rendered as inline SVG
+text. Brand color reuses the Gemini token because Antigravity runs Gemini
+models, mirroring the grok-cli → XaiIcon reuse decision (FN-7705).
+*/
+function AgyCliIcon({ size, color, label = "Antigravity — via Antigravity CLI" }: { size: number; color: string; label?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      data-testid="agy-cli-icon"
+      aria-label={label}
+    >
+      {/* Stylized "A" monogram for Antigravity, slightly shrunk to leave room for the badge */}
+      <text
+        x="7"
+        y="15"
+        fontFamily="-apple-system, system-ui, sans-serif"
+        fontSize="13"
+        fontWeight="700"
+        fill={color}
+      >
+        A
+      </text>
+      {/* Terminal badge — filled square with "> _" glyph, mirroring Claude/Droid CLI */}
+      <rect x="13" y="13" width="10" height="9" rx="1.5" fill={color} />
+      <path
+        d="M15.2 16.2l1.6 1.4-1.6 1.4M18.6 19.6h2.4"
+        stroke="var(--provider-icon-contrast)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 const providerConfig: Record<
   string,
   { component: typeof AnthropicIcon; color: string; label?: string }
@@ -859,6 +903,13 @@ const providerConfig: Record<
   FN-7705: reuse the existing XaiIcon/brand color for the grok-cli synthetic auth provider — Grok is an xAI product, and no dedicated CLI-badge asset exists yet. Do not fabricate a new icon asset per AGENTS.md/PROMPT.md guidance.
   */
   "grok-cli": { component: XaiIcon, color: "var(--text)", label: "Grok — via Grok CLI" },
+  /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  Antigravity CLI synthetic auth provider — reuse the Gemini brand color because
+  Antigravity runs Gemini models, mirroring the grok-cli → XaiIcon reuse (FN-7705).
+  No dedicated CLI-badge asset exists; the AgyCliIcon is a text/glyph mark.
+  */
+  "agy-cli": { component: AgyCliIcon, color: "var(--provider-gemini)", label: "Antigravity — via Antigravity CLI" },
   "llama-cpp": { component: LlamaCppIcon, color: "var(--provider-ollama)", label: "llama.cpp" },
   "llama-server": { component: LlamaCppIcon, color: "var(--provider-ollama)", label: "llama.cpp" },
 

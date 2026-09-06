@@ -16,6 +16,7 @@ const SYNTHETIC_FIRST_CLASS_PROVIDER_IDS = [
   "cursor-cli",
   "grok-cli",
   "omp-cli",
+  "agy-cli",
   "llama-cpp",
   "llama-server",
   "hermes",
@@ -116,6 +117,25 @@ describe("ProviderIcon", () => {
     render(<ProviderIcon provider="cursor" />);
     expect(screen.getByTestId("cursor-cli-icon")).toBeInTheDocument();
     expect(document.querySelector('[data-provider="cursor"] svg:not([data-testid])')).not.toBeInTheDocument();
+  });
+
+  /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  The agy-cli synthetic auth provider must render its text/glyph AgyCliIcon with the
+  Gemini brand color token (Antigravity runs Gemini models), mirroring the cursor-cli
+  brand-mark assertion above. No new image asset is used.
+  */
+  it("renders agy-cli icon with the Gemini provider token color", () => {
+    render(<ProviderIcon provider="agy-cli" />);
+    const svg = screen.getByTestId("agy-cli-icon");
+    expect(svg).toBeInTheDocument();
+    expect(screen.getByLabelText("Antigravity — via Antigravity CLI")).toBeInTheDocument();
+    expect(svg.parentElement).toHaveStyle({ color: "var(--provider-gemini)" });
+  });
+
+  it("infers agy provider strings to the agy-cli brand icon", () => {
+    render(<ProviderIcon provider="agy" />);
+    expect(screen.getByTestId("agy-cli-icon")).toBeInTheDocument();
   });
 
   it("renders the OMP brand icon, auth label, and official tokenized gradient for omp-cli", () => {

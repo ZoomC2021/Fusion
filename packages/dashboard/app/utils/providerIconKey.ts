@@ -23,6 +23,16 @@ export function inferProviderIconKey(modelOrProviderName: string): string {
     return "cursor-cli";
   }
   /*
+  FNXC:AgyCli 2026-09-06-00:00:
+  Antigravity CLI provider strings (agy, agy-cli, agy-cli/<model>) must resolve to the
+  agy-cli brand icon on model-selection surfaces. Run before the broad gemini/google/
+  antigravity check so agy-cli/gemini-3.7-flash-high stays Antigravity-branded instead of
+  Google-branded, mirroring the cursor ordering above.
+  */
+  if (normalized === "agy" || normalized === "agy-cli" || normalized.startsWith("agy-cli/") || normalized.startsWith("agy/")) {
+    return "agy-cli";
+  }
+  /*
   FNXC:ProviderIcons 2026-07-18-18:24:
   FN-8354: omp ACP model ids can contain another vendor model name (for example omp/claude-sonnet-4), but must retain the OMP brand mark on selection and analytics surfaces. Match only an OMP segment or the Oh My Pi name so unrelated strings and untagged model ids keep existing inference/fallback behavior.
   */

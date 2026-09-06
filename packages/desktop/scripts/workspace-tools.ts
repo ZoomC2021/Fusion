@@ -109,6 +109,7 @@ export const DASHBOARD_RUNTIME_PLUGIN_PACKAGES = [
   "plugins/fusion-plugin-claude-runtime",
   "plugins/fusion-plugin-omp-runtime",
   "plugins/fusion-plugin-droid-runtime",
+  "plugins/fusion-plugin-agy-runtime",
   "plugins/fusion-plugin-roadmap",
   "plugins/fusion-plugin-todos",
 ] as const;

@@ -1,0 +1,6 @@
+{
+  "id": "fusion-plugin-agy-runtime",
+  "name": "Antigravity CLI Runtime Plugin",
+  "version": "0.1.0",
+  "description": "Provides Antigravity CLI (agy)-backed model provider and runtime integration"
+}

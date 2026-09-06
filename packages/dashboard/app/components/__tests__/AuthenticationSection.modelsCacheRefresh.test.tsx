@@ -50,6 +50,9 @@ vi.mock("../ClaudeCliProviderCard", () => ({
 vi.mock("../CursorCliProviderCard", () => ({
   CursorCliProviderCard: mockCliCard("cursor-cli-toggle"),
 }));
+vi.mock("../AgyCliProviderCard", () => ({
+  AgyCliProviderCard: mockCliCard("agy-cli-toggle"),
+}));
 vi.mock("../GrokCliProviderCard", () => ({
   GrokCliProviderCard: mockCliCard("grok-cli-toggle"),
 }));

@@ -95,14 +95,13 @@ describe("CLI provider routing conformance", () => {
     "applies $providerId auto-derive fail-fast policy for every unavailable lookup state",
     async (entry) => {
       vi.spyOn(fusionCore, "isGrokApiKeyFusionVisible").mockReturnValue(grokVisibility(entry));
+      const providerNamedError = entry.providerId === "cursor-cli" ? /Cursor CLI/ : entry.providerId === "agy-cli" ? /Antigravity CLI/ : /runtime plugin/i;
       for (const availability of ["missing", "throws"] as const) {
         await expect(createResolvedAgentSession(options(entry, {
           pluginRunner: entry.runtimeId ? runner(entry.runtimeId, availability) : undefined,
-        }))).rejects.toThrow(entry.providerId === "cursor-cli" ? /Cursor CLI/ : /runtime plugin/i);
+        }))).rejects.toThrow(providerNamedError);
       }
-      await expect(createResolvedAgentSession(options(entry, { pluginRunner: undefined }))).rejects.toThrow(
-        entry.providerId === "cursor-cli" ? /Cursor CLI/ : /runtime plugin/i,
-      );
+      await expect(createResolvedAgentSession(options(entry, { pluginRunner: undefined }))).rejects.toThrow(providerNamedError);
     },
   );
 

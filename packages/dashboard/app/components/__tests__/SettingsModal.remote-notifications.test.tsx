@@ -133,6 +133,9 @@ vi.mock("../../api", async (importOriginal) => {
     fetchCursorCliStatus: (...args: unknown[]) => mockFetchCursorCliStatus(...args),
     setCursorCliEnabled: (...args: unknown[]) => mockSetCursorCliEnabled(...args),
     setCursorCliBinaryPath: (...args: unknown[]) => mockSetCursorCliBinaryPath(...args),
+    fetchAgyCliStatus: (...args: unknown[]) => mockFetchAgyCliStatus(...args),
+    setAgyCliEnabled: (...args: unknown[]) => mockSetAgyCliEnabled(...args),
+    setAgyCliBinaryPath: (...args: unknown[]) => mockSetAgyCliBinaryPath(...args),
   });
 });
 

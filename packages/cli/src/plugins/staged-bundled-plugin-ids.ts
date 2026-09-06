@@ -9,6 +9,8 @@ export const RUNTIME_PLUGIN_IDS = [
   "fusion-plugin-omp-runtime",
   "fusion-plugin-droid-runtime",
   "fusion-plugin-acp-runtime",
+  // FNXC:AgyRuntime 2026-09-06: Antigravity CLI runtime — staged for explicit runtime use, not auto-installed.
+  "fusion-plugin-agy-runtime",
 ] as const;
 
 /**

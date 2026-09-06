@@ -48,6 +48,10 @@ export function buildMissingCursorRuntimeError(): Error {
   return unavailable("Cursor CLI", "Install and enable the Cursor runtime plugin (fusion-plugin-cursor-runtime), install `cursor-agent`, and authenticate with `cursor-agent login`.");
 }
 
+export function buildMissingAgyRuntimeError(): Error {
+  return unavailable("Antigravity CLI", "Install and enable the Antigravity CLI runtime plugin (fusion-plugin-agy-runtime), install `agy` (https://antigravity.google/docs/cli/overview), and authenticate by running `agy` once.");
+}
+
 /*
 FNXC:CliRuntimeRouting 2026-08-15-13:51:
 Picker rows are selectable execution contracts. The census keeps every catalog
@@ -61,6 +65,13 @@ resolveRuntime decides them after this seam confirms a registration exists.
 FN-9097 verified the supervised cursor-agent stream-json transport. Cursor now
 uses the same runtime-routed contract as Hermes/Claude: a missing runtime fails
 fast and fallback-only selection is dropped rather than delegated to pi.
+
+FNXC:CliRuntimeRouting 2026-09-06:
+Antigravity CLI (`agy-cli`) uses the same runtime-routed contract as
+Claude/Hermes via the supervised stream-json transport: a missing runtime fails
+fast and fallback-only selection is dropped with a warning rather than delegated
+to pi. The bundled fusion-plugin-agy-runtime plugin is staged for explicit
+install (like droid/acp), not auto-installed at host startup.
 */
 export const CLI_PROVIDER_ROUTING_CENSUS: readonly CliProviderRouting[] = [
   { providerId: "pi-claude-cli", classification: "registry-native", autoDerive: "n/a", guardNotApplicable: "n/a", onExplicitHint: "n/a", fallbackPolicy: "none", rationale: "Vendored pi extension resolves through pi's registry." },
@@ -72,6 +83,7 @@ export const CLI_PROVIDER_ROUTING_CENSUS: readonly CliProviderRouting[] = [
   { providerId: "grok-cli", classification: "runtime-routed", runtimeId: "grok", autoDerive: "fail-fast", guardNotApplicable: "pinned-pi-fallback", onExplicitHint: "defer-to-resolve-runtime", fallbackPolicy: "defer-to-runtime", missingRuntimeError: buildMissingGrokRuntimeError, rationale: "Visible-key, fallback-only, and explicit-hint paths intentionally preserve the shipped direct xAI/pi fallback." },
   { providerId: "hermes", classification: "runtime-routed", runtimeId: "hermes", autoDerive: "fail-fast", guardNotApplicable: "pinned-pi-fallback", onExplicitHint: "assert-available", fallbackPolicy: "drop-with-warning", missingRuntimeError: buildMissingHermesRuntimeError, rationale: "Fallback-only Hermes cannot be resolved by a healthy primary pi runtime." },
   { providerId: "claude-cli", classification: "runtime-routed", runtimeId: "claude", autoDerive: "fail-fast", guardNotApplicable: "pinned-pi-fallback", onExplicitHint: "assert-available", fallbackPolicy: "drop-with-warning", missingRuntimeError: buildMissingClaudeRuntimeError, rationale: "Fallback-only Claude CLI cannot be resolved by a healthy primary pi runtime." },
+  { providerId: "agy-cli", classification: "runtime-routed", runtimeId: "agy", autoDerive: "fail-fast", guardNotApplicable: "pinned-pi-fallback", onExplicitHint: "assert-available", fallbackPolicy: "drop-with-warning", missingRuntimeError: buildMissingAgyRuntimeError, rationale: "Fallback-only Antigravity CLI cannot be resolved by a healthy primary pi runtime." },
   { providerId: "cursor-cli", classification: "runtime-routed", runtimeId: "cursor", autoDerive: "fail-fast", guardNotApplicable: "pinned-pi-fallback", onExplicitHint: "assert-available", fallbackPolicy: "defer-cross-runtime", missingRuntimeError: buildMissingCursorRuntimeError, rationale: "Cursor fallback is withheld from a healthy foreign runtime and armed for a single prompt-time cross-runtime swap." },
 ] as const;
 

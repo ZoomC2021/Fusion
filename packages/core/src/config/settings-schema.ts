@@ -351,6 +351,12 @@ export const DEFAULT_GLOBAL_SETTINGS = {
   Cursor CLI binary overrides are global operator settings because executable locations are machine-local. Blank/undefined preserves PATH auto-detection through cursor-agent and cursor.
   */
   cursorCliBinaryPath: undefined,
+  /*
+  FNXC:AgyRuntime 2026-09-06:
+  Antigravity CLI enable + binary override are global operator settings (machine-local), mirroring Cursor.
+  */
+  agyCliEnabled: undefined,
+  agyCliBinaryPath: undefined,
   useGrokCli: undefined,
   /*
   FNXC:GrokCli 2026-07-08-00:00:

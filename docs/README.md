@@ -142,6 +142,7 @@ FN-7088 links previously-unlinked first-class testing and baseline docs here so 
 | [Workflow Policy Ownership Map](./workflow-policy-ownership-map.md) | U1 characterization map classifying production merge, retry, scheduling, and recovery policy branches before workflow-policy migration cutover |
 | [Test-Speed Baseline (2026-06-03)](./test-speed-baseline-2026-06-03.md) | Measured per-file test timing baseline and optimization targets (successor to FN-5048 audit) |
 | [ACP Runtime Contract](./acp-contract.md) | Agent Client Protocol plugin launch/readiness contract and failure taxonomy |
+| [Antigravity CLI Runtime Contract](./agy-cli-contract.md) | Antigravity CLI (`agy`) plugin launch/readiness contract, stream-json transport, model discovery, resume/cancel semantics, and failure taxonomy |
 | [ACP MCP Passthrough & Permission Forwarding Upstream Sponsorship (FN-6475)](./upstream/claude-code-cli-acp-mcp-permission-forwarding.md) | Ready-to-file upstream sponsorship for `claude-code-cli-acp` ACP `session/new.mcpServers` passthrough and permission-gate traversal; Route A remains NOT GO until proven |
 | [Mission Completion Gate Contract](./missions-completion-contract.md) | Decision record for mission completion gate invariants and acceptance flow |
 

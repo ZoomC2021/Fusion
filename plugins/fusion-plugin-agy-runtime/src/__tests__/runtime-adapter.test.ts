@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AgyRuntimeAdapter } from "../runtime-adapter.js";
+import * as scoped from "../scoped-mcp.js";
 import * as transport from "../prompt-transport.js";
 
 describe("AgyRuntimeAdapter", () => {
@@ -86,10 +87,11 @@ describe("AgyRuntimeAdapter", () => {
     const spy = vi.spyOn(transport, "launchAgyPrompt");
     const adapter = new AgyRuntimeAdapter();
     const { session } = await adapter.createSession({ cwd: "/tmp", systemPrompt: "sys", [key]: [{ name: "fn_task_done", execute: vi.fn() }] });
-    expect(session.fusionToolBridgeError).toEqual({ reasonCode: "bridge-start-failed" });
+    const bridge = vi.spyOn(scoped, "startScopedMcp").mockRejectedValue(new Error("required Fusion/custom tools unavailable"));
     await expect(adapter.promptWithFallback(session, "work")).rejects.toThrow("required Fusion/custom tools");
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+    bridge.mockRestore();
   });
 
   it("does not record a bridge error when no fusionTools are requested", async () => {
@@ -139,4 +141,25 @@ it("never starts a caller-preaborted turn", async () => {
   await expect(adapter.promptWithFallback(session, "work", { signal: AbortSignal.abort() })).rejects.toMatchObject({ name: "AbortError" });
   expect(spy).not.toHaveBeenCalled();
   spy.mockRestore();
+});
+
+it.each(["success", "failure"])("cleans up a scoped bridge after transport %s and retains the server key across turns", async outcome => {
+  const dispose = vi.fn().mockResolvedValue(undefined);
+  const bridge = vi.spyOn(scoped, "startScopedMcp").mockResolvedValue({configPath: "/private/config", targetPath: "/global/config", dispose});
+  const transportSpy = vi.spyOn(transport, "launchAgyPrompt");
+  if (outcome === "success") transportSpy.mockResolvedValue({text: "ok", conversationId: "c1"});
+  else transportSpy.mockRejectedValue(new Error("failed"));
+  const adapter = new AgyRuntimeAdapter();
+  const execute = vi.fn();
+  const {session} = await adapter.createSession({cwd: "/tmp", systemPrompt: "sys", fusionTools: [{name: "fn_done", execute}], customTools: [{name: "fn_done", execute}, {name: "custom", execute}]});
+  const key = session.mcpServerKey;
+  for (let i = 0; i < 2; i++) {
+    if (outcome === "success") await adapter.promptWithFallback(session, "work");
+    else await expect(adapter.promptWithFallback(session, "work")).rejects.toThrow("failed");
+  }
+  expect(dispose).toHaveBeenCalledTimes(2);
+  expect(bridge.mock.calls[0][0].map(tool => tool.name)).toEqual(["fn_done", "custom"]);
+  expect(bridge.mock.calls[1][1]).toBe(key);
+  expect(transportSpy.mock.calls[0][0].scopedMcp?.configPath).toBe("/private/config");
+  vi.restoreAllMocks();
 });

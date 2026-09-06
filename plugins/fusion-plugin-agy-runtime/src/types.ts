@@ -11,24 +11,8 @@ export interface AgyBinaryStatus {
   probeDurationMs: number;
 }
 
-/*
-FNXC:AgyMcpBridge 2026-09-06:
-The fn_* tool bridge is deferred: agy 1.1.27 does not load workspace plugin
-MCP servers in print/stream-json mode, and the machine-wide global config is
-rejected for cross-session isolation. These loose types remain intentionally
-declared so a future bridge worker (when agy gains per-session MCP support)
-can populate them without changing this file. See
-docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md.
-*/
-export interface ToolLike {
-  name: string;
-  execute?: (...args: unknown[]) => unknown;
-}
-
-export interface AgyToolBridge {
-  dispose: () => Promise<void>;
-  serverEntry: unknown;
-}
+import type { ToolLike } from "@fusion-plugin-examples/acp-runtime/tool-bridge";
+export type { ToolLike } from "@fusion-plugin-examples/acp-runtime/tool-bridge";
 
 export interface AgentRuntimeOptions {
   cwd: string;
@@ -57,9 +41,7 @@ export interface AgyStreamSession {
   fusedSystemPrompt: string;
   disposed: boolean;
   activeAbortController?: AbortController;
-  toolBridge?: AgyToolBridge;
-  mcpLease?: { dispose: () => Promise<void>; heartbeat: () => Promise<unknown> };
-  mcpHeartbeatTimer?: ReturnType<typeof setInterval>;
+  hostTools?: ToolLike[];
   mcpServerKey?: string;
   fusionToolBridgeError?: { reasonCode: "bridge-start-failed" };
   dispose: () => void | Promise<void>;

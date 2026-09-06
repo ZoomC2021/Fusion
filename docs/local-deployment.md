@@ -27,8 +27,9 @@ carries (find them with `git log --oneline upstream/main..main`):
   it never overwrites the user's or project's MCP configuration.
 - `plugins/fusion-plugin-agy-runtime/` — Antigravity native stream runtime and
   dashboard provider surface, merged from the fork's remote main. Native-only
-  text sessions are live-tested; sessions requiring Fusion/custom MCP tools
-  fail explicitly because current agy print mode has no per-session MCP config.
+  text sessions and Linux Fusion/custom MCP calls are live-tested. Tool-bearing
+  turns require `/usr/bin/bwrap` and an existing global MCP config; a private
+  read-only mount substitutes the per-turn config without editing host settings.
 - `plugins/fusion-plugin-droid-runtime/src/sdk-provider.ts` — official SDK
   transport replaces obsolete print flags. Fusion owns tool execution; only
   Droid's metadata-only ToolSearch helper may run internally. The provider

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { startScopedMcp } from "./scoped-mcp.js";
 import { launchAgyPrompt } from "./prompt-transport.js";
 import type { AgentRuntime, AgentRuntimeOptions, AgentSessionResult, AgyStreamSession } from "./types.js";
 
@@ -49,40 +51,15 @@ export class AgyRuntimeAdapter implements AgentRuntime {
         if (session.disposed) return;
         session.disposed = true;
         session.activeAbortController?.abort();
-        if (session.mcpHeartbeatTimer) clearInterval(session.mcpHeartbeatTimer);
-        await session.mcpLease?.dispose().catch(() => undefined);
-        await session.toolBridge?.dispose().catch(() => undefined);
+
       },
     };
 
-    /*
-    FNXC:AgyMcpBridge 2026-09-06:
-    The fn_* tool bridge is intentionally NOT implemented. agy 1.1.27 does not
-    load workspace plugin MCP servers (`.agents/plugins/<name>/mcp_config.json`)
-    in `--input-format stream-json --output-format stream-json` (print) mode —
-    the only transport Fusion uses. Verified against the real 1.1.27 binary:
-    `agy plugin validate` accepts the plugin, but a print/stream-json turn
-    never registers its MCP server (`init.tools` lists `call_mcp_tool` but no
-    `fn_*` tool; the agent reports the server unavailable; `--log-file` shows
-    `declarative_config_loader.go: skipping component … empty component: prompt
-    section "mcp_servers"`). The only MCP path that loads in print mode is the
-    machine-wide `~/.gemini/config/mcp_config.json`, which the orchestrator
-    rejected because it would leak Fusion `fn_*` tools across all agy sessions
-    and operators on the host. Redirect experiments (XDG_CONFIG_HOME, HOME
-    override with symlinked antigravity-cli, ANTIGRAVITY_EXECUTABLE_DATA_DIR,
-    --add-dir, --new-project, --enable-plugins, AGY_CLI_NEW_HARNESS) all failed
-    to load a per-session MCP config with working auth. See
-    docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md for the
-    full experiment matrix and the re-test procedure for newer agy releases.
-
-    A session with Fusion custom tools therefore records
-    `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
-    code Cursor uses) so the engine surfaces it consistently, and prompting fails explicitly before spawning native work. The session types (`toolBridge`, `mcpLease`,
-    `mcpServerKey`) remain declared so a future bridge worker can populate them
-    without changing types.ts.
-    */
-    if (options.fusionTools?.length || options.customTools?.length) {
-      session.fusionToolBridgeError = { reasonCode: "bridge-start-failed" };
+    const requested = [...(options.fusionTools ?? []), ...(options.customTools ?? [])];
+    if (requested.length) {
+      session.hostTools = [...new Map(requested.map(tool => [tool.name, tool])).values()];
+      session.mcpServerKey = `fusion-${randomUUID()}`;
+      session.fusedSystemPrompt += `\nFusion host tools are available through call_mcp_tool on server ${session.mcpServerKey}: ${session.hostTools.map(tool => tool.name).join(", ")}.`;
     }
 
     return { session, sessionFile: undefined };
@@ -100,9 +77,12 @@ export class AgyRuntimeAdapter implements AgentRuntime {
     const controller = new AbortController();
     session.activeAbortController = controller;
     const signal = outerSignal ? AbortSignal.any([outerSignal, controller.signal]) : controller.signal;
+    let scopedMcp: Awaited<ReturnType<typeof startScopedMcp>> | undefined;
     try {
+      if (session.hostTools?.length) scopedMcp = await startScopedMcp(session.hostTools, session.mcpServerKey!, signal);
       const outcome = await launchAgyPrompt({
         binary: typeof this.settings?.agyCliBinaryPath === "string" ? this.settings.agyCliBinaryPath : undefined,
+        scopedMcp,
         model: session.model,
         cwd: session.cwd,
         tools: session.tools,
@@ -122,6 +102,7 @@ export class AgyRuntimeAdapter implements AgentRuntime {
       session.conversationId = priorId;
       throw error;
     } finally {
+      await scopedMcp?.dispose();
       if (session.activeAbortController === controller) session.activeAbortController = undefined;
     }
   }

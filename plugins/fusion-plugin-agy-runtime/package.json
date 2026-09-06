@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@fusion/core": "workspace:*",
+    "@fusion-plugin-examples/acp-runtime": "workspace:*",
     "@fusion/plugin-sdk": "workspace:*"
   },
   "devDependencies": {

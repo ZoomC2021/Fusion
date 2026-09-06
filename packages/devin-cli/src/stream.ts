@@ -152,7 +152,10 @@ export function streamViaDevinAcp(model: Model<Api>, context: Context, options: 
       stream.push({ type: "start", partial: output });
       accepting = true;
       const result = await request("session/prompt", { sessionId, prompt: [{ type: "text", text: resumed ? latestUserTurn : prompt }] }, timeout) as { stopReason?: string; usage?: { totalTokens?: number } };
-      output.stopReason = result?.stopReason === "max_tokens" ? "length" : result?.stopReason === "cancelled" ? "aborted" : "stop";
+      if (!result || !["end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled"].includes(result.stopReason ?? "")) {
+        throw new Error("Devin prompt returned no valid terminal stop reason");
+      }
+      output.stopReason = result.stopReason === "max_tokens" || result.stopReason === "max_turn_requests" ? "length" : result?.stopReason === "cancelled" ? "aborted" : "stop";
       if (typeof result?.usage?.totalTokens === "number") output.usage.totalTokens = result.usage.totalTokens;
       await lease?.save({ acpSessionId: sessionId, cwd, model: model.id });
     } catch (error) {

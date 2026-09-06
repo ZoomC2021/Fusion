@@ -16,6 +16,7 @@ let calls: Array<{ method: string; params: Record<string, unknown> }>;
 let failures: Set<string>;
 let silent: Set<string>;
 let updates: object[];
+let terminalResult: unknown;
 let hostCall: { name: string; arguments: object } | undefined;
 const model = { id: "glm-5-2", provider: "devin-cli" } as Model<Api>;
 const context = { systemPrompt: "system", messages: [{ role: "user", content: "old" }, { role: "assistant", content: "answer" }, { role: "user", content: "new" }] };
@@ -41,14 +42,14 @@ function fakeProcess() {
           }
           update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "completed" } });
         }
-        proc.stdout.write(JSON.stringify({ id: msg.id, ...(failures.has(msg.method) ? { error: { code: -32000, message: `${msg.method} rejected` } } : { result: msg.method === "session/new" ? { sessionId: "fresh" } : { stopReason: "end_turn" } }) }) + "\n");
+        proc.stdout.write(JSON.stringify({ id: msg.id, ...(failures.has(msg.method) ? { error: { code: -32000, message: `${msg.method} rejected` } } : { result: msg.method === "session/new" ? { sessionId: "fresh" } : msg.method === "session/prompt" ? terminalResult : {} }) }) + "\n");
       }
     }); done();
   } }); return proc;
 }
 async function run() { return config.streamSimple(model, context, { cwd: "/workspace", sessionId: "pi" }).result(); }
 beforeEach(() => {
-  vi.clearAllMocks(); calls = []; failures = new Set(); silent = new Set(); updates = []; hostCall = undefined; mocks.enabled = true;
+  vi.clearAllMocks(); calls = []; failures = new Set(); silent = new Set(); updates = []; hostCall = undefined; mocks.enabled = true; terminalResult = { stopReason: "end_turn" };
   mocks.dispose.mockResolvedValue(undefined); mocks.configDispose.mockResolvedValue(undefined);
   mocks.spawn.mockImplementation(fakeProcess); mocks.acquire.mockResolvedValue({ read: mocks.read, save: mocks.save, release: mocks.release });
   mocks.bridge.mockImplementation(async (tools: unknown[]) => tools.length ? { mcpServer: { name: "fusion" }, dispose: mocks.dispose } : null);
@@ -138,4 +139,15 @@ describe("Fusion handoff and activity", () => {
     await vi.advanceTimersByTimeAsync(0); controller.abort(); expect((await stream.result()).stopReason).toBe("aborted");
     expect(calls.some(c => c.method === "session/cancel")).toBe(true); expect(mocks.dispose).toHaveBeenCalledOnce(); expect(mocks.release).toHaveBeenCalledOnce();
   });
+});
+
+it.each([{}, null, { stopReason: "unknown" }])("rejects malformed terminal results without persisting successful state: %j", async value => {
+  setup(); terminalResult = value;
+  const result = await run();
+  expect(result.stopReason).toBe("error"); expect(result.errorMessage).toContain("terminal stop reason");
+  expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.release).toHaveBeenCalledOnce();
+});
+it("preserves turn-budget exhaustion as a length stop", async () => {
+  setup(); terminalResult = { stopReason: "max_turn_requests" };
+  expect((await run()).stopReason).toBe("length");
 });

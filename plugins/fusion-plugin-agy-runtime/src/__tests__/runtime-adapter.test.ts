@@ -82,28 +82,13 @@ describe("AgyRuntimeAdapter", () => {
     await expect(adapter.promptWithFallback(session, "x")).rejects.toThrow(/disposed/);
   });
 
-  it("records bridge-start-failed when fusionTools are requested and the turn still runs tool-less (agy MCP bridge deferred)", async () => {
-    const spy = vi.spyOn(transport, "launchAgyPrompt").mockResolvedValueOnce({ conversationId: "c1", text: "ran without tools" });
+  it.each(["fusionTools", "customTools"])("refuses unavailable %s before native work starts", async key => {
+    const spy = vi.spyOn(transport, "launchAgyPrompt");
     const adapter = new AgyRuntimeAdapter();
-    const { session } = await adapter.createSession({
-      cwd: "/tmp",
-      systemPrompt: "system",
-      fusionTools: [{ name: "fn_task_list", execute: vi.fn() }],
-    });
-    // The degradation is first-class and tested: agy 1.1.27 cannot load
-    // per-session MCP servers in print/stream-json mode, so the session
-    // records bridge-start-failed (same code Cursor uses) and no bridge.
+    const { session } = await adapter.createSession({ cwd: "/tmp", systemPrompt: "sys", [key]: [{ name: "fn_task_done", execute: vi.fn() }] });
     expect(session.fusionToolBridgeError).toEqual({ reasonCode: "bridge-start-failed" });
-    expect(session.toolBridge).toBeUndefined();
-    expect(session.mcpLease).toBeUndefined();
-    expect(session.mcpServerKey).toBeUndefined();
-    // The turn still runs tool-less — the bridge failure never blocks the prompt.
-    await adapter.promptWithFallback(session, "do something");
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(session.messages).toEqual([
-      { role: "user", content: "do something" },
-      { role: "assistant", content: "ran without tools" },
-    ]);
+    await expect(adapter.promptWithFallback(session, "work")).rejects.toThrow("required Fusion/custom tools");
+    expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 
@@ -128,4 +113,30 @@ describe("AgyRuntimeAdapter", () => {
     expect(session.disposed).toBe(true);
     vi.restoreAllMocks();
   });
+});
+
+it("honors caller cancellation and refuses overlapping turns without losing its controller", async () => {
+  const spy = vi.spyOn(transport, "launchAgyPrompt").mockImplementationOnce(input => new Promise((_resolve, reject) => {
+    input.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+  }));
+  const adapter = new AgyRuntimeAdapter();
+  const { session } = await adapter.createSession({ cwd: "/tmp", systemPrompt: "sys" });
+  const controller = new AbortController();
+  const active = adapter.promptWithFallback(session, "first", { signal: controller.signal });
+  await expect(adapter.promptWithFallback(session, "second")).rejects.toThrow("active turn");
+  controller.abort();
+  await expect(active).rejects.toThrow("aborted");
+  expect(session.messages).toEqual([]);
+  expect(session.activeAbortController).toBeUndefined();
+  expect(spy).toHaveBeenCalledTimes(1);
+  spy.mockRestore();
+});
+
+it("never starts a caller-preaborted turn", async () => {
+  const spy = vi.spyOn(transport, "launchAgyPrompt");
+  const adapter = new AgyRuntimeAdapter();
+  const { session } = await adapter.createSession({ cwd: "/tmp", systemPrompt: "sys" });
+  await expect(adapter.promptWithFallback(session, "work", { signal: AbortSignal.abort() })).rejects.toMatchObject({ name: "AbortError" });
+  expect(spy).not.toHaveBeenCalled();
+  spy.mockRestore();
 });

@@ -11,6 +11,8 @@ Tool-bearing turns refused → isolated per-turn MCP configuration with authenti
 
 ## File Scope
 - plugins/fusion-plugin-agy-runtime/
+- packages/cli/tsup.config.ts
+- packages/cli/src/__tests__/bundle-output-helpers.ts
 - pnpm-lock.yaml
 - docs/agy-cli-contract.md
 - docs/local-deployment.md
@@ -21,7 +23,8 @@ Tool-bearing turns refused → isolated per-turn MCP configuration with authenti
 Native-only versus host-tool turns; fusionTools and customTools; new and resumed
 sessions; parallel sessions; Linux support versus missing bwrap/config/namespaces;
 caller cancellation, disposal, setup failures, transport failures, and successful
-cleanup. Both coding and readonly native postures retain their flags.
+cleanup. Both coding and readonly native postures retain their flags. Source-loaded and
+packaged plugins both require the shared MCP schema-server asset.
 
 ## Symptom Verification
 - Original symptom: required Fusion tools could not be called in agy stream mode.

@@ -79,3 +79,6 @@ packages:
   - "plugins/fusion-plugin-compound-engineering"
   - "plugins/fusion-plugin-quality"
   - "plugins/fusion-plugin-linear-import"
+
+patchedDependencies:
+  '@earendil-works/pi-ai@0.84.4': patches/@earendil-works__pi-ai@0.84.4.patch

@@ -204,3 +204,22 @@ Surface coverage: mixed text/images, multiple images, duplicates, earlier user
 turns, tool results, malformed or external sources, image-capable/text-only/unknown/
 disabled model metadata, cancellation, and capability-discovery failures. Text-only
 turns retain their existing protocol without an extra catalog request.
+
+## Muse Spark Contributor Free
+
+Fusion's local `~/.fusion/agent/models.json` registers
+`opencode-free-responses/muse-spark-1.3-contributor-free` under provider
+`opencode-free-responses`, using the existing router's authenticated loopback
+Responses API. The picker name is **Muse Spark 1.3 Contributor (OpenCode Free)**.
+Its declared limits match the router: 1,048,576 context tokens, 131,072 output
+tokens, text/image input, and minimal through xhigh reasoning. This does not
+change Fusion's default model. The router service must be running; if its caller
+key is rotated, update this local provider credential as well. No credential
+belongs in this repository.
+
+The pinned pi-ai patch makes completed/incomplete Responses events terminal.
+Without it, LiteLLM's error trailer after Muse's successful response overwrote
+`toolUse`, and the next request lost the matching host call. A live tool-call /
+tool-result / final-answer round trip verifies the configured Fusion registry.
+Remove the patch when upgrading to an SDK version that fixes the same invariant,
+keeping `openai-responses-terminal.test.ts` as the regression check.

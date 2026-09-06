@@ -398,6 +398,7 @@ canonical emitters remain explicit exclusions until their separately scoped hard
 
 ## Reference docs (deeper detail)
 
+- `./docs/local-deployment.md` — **this checkout is a live fork deployment**: local-only patches (devin-cli provider, droid-cli fixes), the `fusion.service` systemd unit, the update/rebuild procedure (including the manual Electron extraction), and post-update verification. Read it before pulling upstream or rebuilding.
 - `./docs/architecture.md` — lifecycle invariants, self-healing rules, reliability interaction backstops, run-audit internals.
 - `./docs/knowledge-graph.md` — deterministic committable codebase structure graph.
 - `./docs/testing.md` — full testing lanes, worker fanout guidance, test taxonomy, weekly velocity baseline, and file organization.

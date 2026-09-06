@@ -1160,7 +1160,7 @@ export {
   assertProjectRootDir,
   LinkedWorktreeBootstrapRefusedError,
 } from "./central/project-root-guard.js";
-export { discoverPiExtensions, formatPiExtensionSource, getEnabledPiExtensionPaths, getFusionAgentDir, getFusionAgentSettingsPath, getLegacyPiAgentDir, getPiExtensionDiscoveryDirs, getProjectRootFromWorktree, reconcileClaudeCliPaths, reconcileDroidCliPaths, resolvePiExtensionProjectRoot, updatePiExtensionDisabledIds } from "./plugins/pi-extensions.js";
+export { discoverPiExtensions, formatPiExtensionSource, getEnabledPiExtensionPaths, getFusionAgentDir, getFusionAgentSettingsPath, getLegacyPiAgentDir, getPiExtensionDiscoveryDirs, getProjectRootFromWorktree, reconcileClaudeCliPaths, reconcileDroidCliPaths, reconcileDevinCliPaths, resolvePiExtensionProjectRoot, updatePiExtensionDisabledIds } from "./plugins/pi-extensions.js";
 export type { PiExtensionEntry, PiExtensionSettings, PiExtensionSource } from "./plugins/pi-extensions.js";
 export { canTransition, getValidTransitions, resolveDependencyOrder } from "./board/board.js";
 export { computeBlockerFanoutMap, BLOCKER_ESCALATION_COLUMNS, isStaleBlockedByBlocker } from "./tasks/blocker-fanout.js";

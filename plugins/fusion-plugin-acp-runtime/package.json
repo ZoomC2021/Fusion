@@ -2,7 +2,7 @@
   "name": "@fusion-plugin-examples/acp-runtime",
   "version": "0.1.37-beta.2",
   "type": "module",
-  "description": "ACP (Agent Client Protocol) runtime plugin for Fusion — drives any ACP-compatible agent over JSON-RPC/stdio",
+  "description": "ACP (Agent Client Protocol) runtime plugin for Fusion \u2014 drives any ACP-compatible agent over JSON-RPC/stdio",
   "keywords": [
     "fusion-plugin",
     "acp",
@@ -17,6 +17,14 @@
     "./probe": {
       "types": "./src/probe.ts",
       "import": "./src/probe.ts"
+    },
+    "./tool-bridge": {
+      "types": "./src/tool-bridge.ts",
+      "import": "./src/tool-bridge.ts"
+    },
+    "./event-bridge": {
+      "types": "./src/event-bridge.ts",
+      "import": "./src/event-bridge.ts"
     }
   },
   "private": true,

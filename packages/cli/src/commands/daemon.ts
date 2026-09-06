@@ -1,3 +1,4 @@
+import { resolveDevinCliExtensions } from "./devin-cli-extension.js";
 /**
  * Fusion Daemon command - API server with bearer token authentication.
  *
@@ -705,7 +706,7 @@ export async function runDaemon(opts: DaemonOptions = {}) {
     );
 
     const extensionsResult = await discoverAndLoadExtensions(
-      [...reconciledExtensionPaths, ...droidCliPaths, ...llamaCppPaths],
+      resolveDevinCliExtensions([...reconciledExtensionPaths, ...droidCliPaths, ...llamaCppPaths], await store.getGlobalSettingsStore().getSettings()),
       primaryCwd,
       join(primaryCwd, ".fusion", "disabled-auto-extension-discovery"),
     );

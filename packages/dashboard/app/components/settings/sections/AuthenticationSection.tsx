@@ -4,6 +4,7 @@ import { formatProviderInstanceKey, refreshBuiltInModels, removeProviderInstance
 import type { AuthProvider, ManualOAuthCodeInfo, OAuthDeviceCodeInfo, ProviderCredentialInstance } from "../../../api";
 import type { ToastType } from "../../../hooks/useToast";
 import { useTranslation } from "react-i18next";
+import { DevinCliProviderCard } from "../../DevinCliProviderCard";
 import { ClaudeCliProviderCard } from "../../ClaudeCliProviderCard";
 import { CursorCliProviderCard } from "../../CursorCliProviderCard";
 import { GrokCliProviderCard } from "../../GrokCliProviderCard";
@@ -109,7 +110,7 @@ export function AuthenticationSection({ auth, form, setForm }: AuthenticationSec
         ? authProviders.filter((p) => p.id !== "anthropic")
         : authProviders;
     // FNXC:OmpAcp 2026-07-13-22:50: include omp-cli among supported CLI auth cards.
-    const isSupportedCliProvider = (provider: AuthProvider) => provider.id === "claude-cli" || provider.id === "cursor-cli" || provider.id === "grok-cli" || provider.id === "omp-cli" || provider.id === "llama-cpp";
+    const isSupportedCliProvider = (provider: AuthProvider) => provider.id === "devin-cli" || provider.id === "claude-cli" || provider.id === "cursor-cli" || provider.id === "grok-cli" || provider.id === "omp-cli" || provider.id === "llama-cpp";
     /*
     FNXC:ProviderAuth 2026-07-02-12:20:
     Authentication ordering must sort supported CLI and non-CLI provider cards in one list so Cursor CLI or llama.cpp cannot split Claude CLI from Anthropic subscription/API-key entries.
@@ -152,6 +153,7 @@ export function AuthenticationSection({ auth, form, setForm }: AuthenticationSec
         }
     };
     const renderCliProviderCard = (provider: AuthProvider) => {
+        if (provider.id === "devin-cli") return <DevinCliProviderCard key={provider.id} compact authenticated={provider.authenticated} onToggled={handleCliProviderToggled}/>;
         if (provider.id === "claude-cli") {
             return (<ClaudeCliProviderCard key={provider.id} compact authenticated={provider.authenticated} onToggled={handleCliProviderToggled}/>);
         }

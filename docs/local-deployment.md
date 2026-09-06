@@ -25,6 +25,14 @@ carries (find them with `git log --oneline upstream/main..main`):
   Devin 3000.6.14 requires an isolated MCP config view in addition to ACP
   `mcpServers`. The provider creates and removes that view per tool-bearing turn;
   it never overwrites the user's or project's MCP configuration.
+- `plugins/fusion-plugin-agy-runtime/` — Antigravity native stream runtime and
+  dashboard provider surface, merged from the fork's remote main. Native-only
+  text sessions are live-tested; sessions requiring Fusion/custom MCP tools
+  fail explicitly because current agy print mode has no per-session MCP config.
+- `plugins/fusion-plugin-droid-runtime/src/sdk-provider.ts` — official SDK
+  transport replaces obsolete print flags. Fusion owns tool execution; only
+  Droid's metadata-only ToolSearch helper may run internally. The provider
+  currently accepts text input. Live text and host tool interception are tested.
 - `packages/cli/package.json` — workspace deps for `@fusion/devin-cli`,
   `@fusion/droid-cli`, and `@fusion-plugin-examples/droid-runtime`. Without
   them `resolveVendoredDevinCliEntry` / `resolveVendoredDroidCliEntry`

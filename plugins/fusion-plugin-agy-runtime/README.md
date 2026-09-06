@@ -47,10 +47,9 @@ only transport Fusion uses. The machine-wide global config
 mode, but writing it would leak Fusion `fn_*` tools across all agy sessions and
 operators on the host, so it is rejected.
 
-A session with `options.fusionTools?.length` records
+A session with `options.fusionTools?.length` or `options.customTools?.length` records
 `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same code
-Cursor uses, so the engine surfaces it consistently) and the turn still runs
-tool-less. The `FNXC:AgyMcpBridge 2026-09-06` block in `runtime-adapter.ts`
+Cursor uses, so the engine surfaces it consistently) and prompting fails before spawning native work. The `FNXC:AgyMcpBridge 2026-09-06` block in `runtime-adapter.ts`
 documents the deferral in-place. The session types (`toolBridge`, `mcpLease`,
 `mcpServerKey`) remain declared so a future bridge worker can populate them
 without changing `types.ts`.

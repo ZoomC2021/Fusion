@@ -14,14 +14,14 @@ const runtimeMocks = vi.hoisted(() => {
     validateCliAuthAsync: vi.fn(async () => undefined),
     killAllProcesses: vi.fn(),
     getCustomToolDefs: vi.fn(() => [
-      { name: "fn_read", description: "Read", input_schema: { type: "object" } },
+      { name: "fn_read", description: "Read", inputSchema: { type: "object" } },
     ]),
     toolsFromContext: vi.fn((tools?: readonly ToolDescriptor[]) =>
       Array.isArray(tools)
         ? tools.map((tool) => ({
             name: tool.name,
             description: tool.description,
-            input_schema: tool.parameters,
+            inputSchema: tool.parameters,
           }))
         : [],
     ),
@@ -48,7 +48,7 @@ describe("droid-cli extension entrypoint", () => {
         ? tools.map((tool) => ({
             name: tool.name,
             description: tool.description,
-            input_schema: tool.parameters,
+            inputSchema: tool.parameters,
           }))
         : [],
     );

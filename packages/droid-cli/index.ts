@@ -75,7 +75,7 @@ function registerDroidProvider(pi: ExtensionAPI, models: DiscoveredModel[]) {
     streamSimple: ((model, context, options) => {
       const requestContext = context as typeof context & { tools?: unknown[] };
       const tools = requestContext.tools ?? getCustomToolDefs(pi).map(tool => ({
-        name: tool.name, description: tool.description, parameters: tool.input_schema,
+        name: tool.name, description: tool.description, parameters: tool.inputSchema,
       }));
       return streamViaCli(
         model,

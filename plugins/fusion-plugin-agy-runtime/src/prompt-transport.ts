@@ -124,13 +124,14 @@ export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDepe
       if (firstTimer) { clearTimeout(firstTimer); firstTimer = undefined; }
       resetInactivity();
       const event = parseAgyStreamLine(line);
-      if (event.kind === "system-init") conversationId = event.conversationId ?? conversationId;
+      // FNXC:AgyCli 2026-09-06-00:00: treat an empty-string conversation_id as absent (the result-error fixture emits conversation_id "") so it cannot clobber the id captured from init.
+      if (event.kind === "system-init") conversationId = event.conversationId || conversationId;
       if (event.kind === "assistant-text") { output += event.text; input.onText?.(event.text); }
       if (event.kind === "tool-call-started") input.onToolStart?.(event.name, event.args);
       if (event.kind === "tool-call-completed") input.onToolEnd?.(event.name, event.isError, event.result);
       if (event.kind === "result") {
         sawResult = true;
-        conversationId = event.conversationId ?? conversationId;
+        conversationId = event.conversationId || conversationId;
         usage = event.usage;
         // FNXC:AgyCli 2026-09-06-00:00: agy's result.response is the canonical full reply; fall back to it when no assistant text_delta was streamed.
         if (event.text && !output) { output = event.text; input.onText?.(event.text); }

@@ -110,6 +110,23 @@ describe("launchAgyPrompt", () => {
     await assertion;
   });
 
+  it("does not let an empty-string result conversation_id clobber the init id", async () => {
+    const { child, supervise } = fakeSupervisor();
+    const promise = launchAgyPrompt({ cwd: "/tmp", prompt: "hi" }, { supervise: supervise as never, platform: "linux" });
+    child.stdout.write(`${INIT}\n`);
+    // result-error fixture shape: conversation_id "" with status ERROR — must not overwrite the init id.
+    child.stdout.write('{"event":"result","result":{"conversation_id":"","status":"ERROR","error":"boom"}}\n');
+    child.emit("close", 1);
+    await expect(promise).rejects.toThrow(/boom/);
+    // The rejection discards the resolved value, so re-run a SUCCESS path with an empty conversation_id to prove the id is retained.
+    const { child: child2, supervise: supervise2 } = fakeSupervisor();
+    const promise2 = launchAgyPrompt({ cwd: "/tmp", prompt: "hi" }, { supervise: supervise2 as never, platform: "linux" });
+    child2.stdout.write(`${INIT}\n`);
+    child2.stdout.write('{"event":"result","result":{"conversation_id":"","status":"SUCCESS","response":"OK\\n"}}\n');
+    child2.emit("close", 0);
+    await expect(promise2).resolves.toMatchObject({ conversationId: "c1", text: "OK\n" });
+  });
+
   it("rejects when the stream ends without a result event", async () => {
     const { child, supervise } = fakeSupervisor();
     const promise = launchAgyPrompt({ cwd: "/tmp", prompt: "hi" }, { supervise: supervise as never, platform: "linux" });

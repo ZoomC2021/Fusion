@@ -45,6 +45,26 @@ describe("AgyRuntimeAdapter", () => {
     spy.mockRestore();
   });
 
+  it("forwards every assistant delta verbatim, including repeated identical deltas", async () => {
+    const text = vi.fn();
+    vi.spyOn(transport, "launchAgyPrompt").mockImplementationOnce(async (input) => {
+      input.onText?.("\n");
+      input.onText?.("\n");
+      return { conversationId: "c1", text: "\n\n" };
+    });
+    const adapter = new AgyRuntimeAdapter();
+    const { session } = await adapter.createSession({ cwd: "/tmp", systemPrompt: "system", onText: text });
+    await adapter.promptWithFallback(session, "x");
+    expect(text).toHaveBeenCalledTimes(2);
+    expect(text).toHaveBeenNthCalledWith(1, "\n");
+    expect(text).toHaveBeenNthCalledWith(2, "\n");
+    expect(session.messages).toEqual([
+      { role: "user", content: "x" },
+      { role: "assistant", content: "\n\n" },
+    ]);
+    vi.restoreAllMocks();
+  });
+
   it("restores the prior conversationId on transport failure", async () => {
     vi.spyOn(transport, "launchAgyPrompt").mockRejectedValueOnce(new Error("failed"));
     const adapter = new AgyRuntimeAdapter();

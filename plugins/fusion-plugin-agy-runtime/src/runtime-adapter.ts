@@ -94,7 +94,6 @@ export class AgyRuntimeAdapter implements AgentRuntime {
     const priorId = session.conversationId;
     const first = !priorId;
     const sent = first ? `${session.fusedSystemPrompt}\n\nUser request:\n${prompt}` : prompt;
-    const emitted = new Set<string>();
     const controller = new AbortController();
     session.activeAbortController = controller;
     try {
@@ -109,14 +108,10 @@ export class AgyRuntimeAdapter implements AgentRuntime {
         onThinking: session.callbacks.onThinking,
         onToolStart: (name, args) => session.callbacks.onToolStart?.(name, args),
         onToolEnd: (name, isError, result) => session.callbacks.onToolEnd?.(name, isError, result),
-        onText: (text) => {
-          if (!emitted.has(text)) {
-            emitted.add(text);
-            session.callbacks.onText?.(text);
-          }
-        },
+        // FNXC:AgyCli 2026-09-06-00:00: forward every delta verbatim; the transport already guards result.response double-emit via its !output check, so a content-keyed Set here would wrongly drop repeated identical deltas (e.g. two "\n").
+        onText: (text) => session.callbacks.onText?.(text),
       });
-      session.conversationId = outcome.conversationId ?? session.conversationId;
+      session.conversationId = outcome.conversationId || session.conversationId;
       session.messages.push({ role: "user", content: prompt }, { role: "assistant", content: outcome.text });
     } catch (error) {
       session.conversationId = priorId;

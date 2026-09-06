@@ -77,25 +77,29 @@ export class AgyRuntimeAdapter implements AgentRuntime {
 
     A session with Fusion custom tools therefore records
     `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
-    code Cursor uses) so the engine surfaces it consistently, and the turn
-    still runs tool-less. The session types (`toolBridge`, `mcpLease`,
+    code Cursor uses) so the engine surfaces it consistently, and prompting fails explicitly before spawning native work. The session types (`toolBridge`, `mcpLease`,
     `mcpServerKey`) remain declared so a future bridge worker can populate them
     without changing types.ts.
     */
-    if (options.fusionTools?.length) {
+    if (options.fusionTools?.length || options.customTools?.length) {
       session.fusionToolBridgeError = { reasonCode: "bridge-start-failed" };
     }
 
     return { session, sessionFile: undefined };
   }
 
-  async promptWithFallback(session: AgyStreamSession, prompt: string, _options?: unknown): Promise<void> {
+  async promptWithFallback(session: AgyStreamSession, prompt: string, options?: unknown): Promise<void> {
     if (session.disposed) throw new Error("agy session is disposed.");
+    if (session.activeAbortController) throw new Error("agy session already has an active turn.");
+    if (session.fusionToolBridgeError) throw new Error("Antigravity CLI cannot expose the required Fusion/custom tools in stream-json mode. Choose a runtime with a host-tool bridge.");
+    const outerSignal = (options as { signal?: AbortSignal } | undefined)?.signal;
+    outerSignal?.throwIfAborted();
     const priorId = session.conversationId;
     const first = !priorId;
     const sent = first ? `${session.fusedSystemPrompt}\n\nUser request:\n${prompt}` : prompt;
     const controller = new AbortController();
     session.activeAbortController = controller;
+    const signal = outerSignal ? AbortSignal.any([outerSignal, controller.signal]) : controller.signal;
     try {
       const outcome = await launchAgyPrompt({
         binary: typeof this.settings?.agyCliBinaryPath === "string" ? this.settings.agyCliBinaryPath : undefined,
@@ -104,13 +108,14 @@ export class AgyRuntimeAdapter implements AgentRuntime {
         tools: session.tools,
         prompt: sent,
         conversationId: priorId || undefined,
-        signal: controller.signal,
+        signal,
         onThinking: session.callbacks.onThinking,
         onToolStart: (name, args) => session.callbacks.onToolStart?.(name, args),
         onToolEnd: (name, isError, result) => session.callbacks.onToolEnd?.(name, isError, result),
         // FNXC:AgyCli 2026-09-06-00:00: forward every delta verbatim; the transport already guards result.response double-emit via its !output check, so a content-keyed Set here would wrongly drop repeated identical deltas (e.g. two "\n").
         onText: (text) => session.callbacks.onText?.(text),
       });
+      signal.throwIfAborted();
       session.conversationId = outcome.conversationId || session.conversationId;
       session.messages.push({ role: "user", content: prompt }, { role: "assistant", content: outcome.text });
     } catch (error) {

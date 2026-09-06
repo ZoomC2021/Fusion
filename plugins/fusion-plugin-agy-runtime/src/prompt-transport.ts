@@ -50,6 +50,7 @@ shims reject unsafe tokens before verbatim quoting. This preserves task-worktree
 autonomy and prevents a long-running agent from outliving Fusion.
 */
 export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDependencies = {}): Promise<AgyPromptResult> {
+  input.signal?.throwIfAborted();
   if (!input.cwd || !existsSync(input.cwd)) throw new Error(`agy CLI requires an existing session cwd: ${input.cwd || "(missing)"}`);
   const platform = deps.platform ?? process.platform;
   const configuredBinary = input.binary?.trim() || undefined;
@@ -108,6 +109,8 @@ export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDepe
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
+      if (error) teardown(error.message);
+      lines.close();
       if (firstTimer) clearTimeout(firstTimer);
       if (inactivityTimer) clearTimeout(inactivityTimer);
       if (input.signal) input.signal.removeEventListener("abort", abort);
@@ -121,6 +124,7 @@ export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDepe
     child.stdin?.on("error", (error: NodeJS.ErrnoException) => { if (error.code !== "EPIPE" && error.code !== "ERR_STREAM_DESTROYED") finish(error); });
     const lines = readline.createInterface({ input: child.stdout! });
     lines.on("line", (line) => {
+      if (settled) return;
       if (firstTimer) { clearTimeout(firstTimer); firstTimer = undefined; }
       resetInactivity();
       const event = parseAgyStreamLine(line);
@@ -147,6 +151,7 @@ export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDepe
       if (!sawResult) return finish(new Error("agy CLI stream ended without a result event."));
       finish();
     });
+    if (input.signal?.aborted) { abort(); return; }
     try {
       const payload = `${JSON.stringify({ event: "user", message: { content: input.prompt } })}\n`;
       child.stdin?.end(payload);

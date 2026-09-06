@@ -205,3 +205,25 @@ describe("launchAgyPrompt", () => {
     await expect(promise).resolves.toMatchObject({ text: "OK\n" });
   });
 });
+
+it("does not spawn for a preaborted transport signal", async () => {
+  const { supervise } = fakeSupervisor();
+  await expect(launchAgyPrompt({ cwd: "/tmp", prompt: "work", signal: AbortSignal.abort() }, { supervise: supervise as never })).rejects.toMatchObject({ name: "AbortError" });
+  expect(supervise).not.toHaveBeenCalled();
+});
+
+it.each(["result", "stdin"])("reaps %s failures and ignores late output without rearming timers", async cause => {
+  vi.useFakeTimers();
+  const { child, supervise } = fakeSupervisor();
+  const onText = vi.fn();
+  const pending = launchAgyPrompt({ cwd: "/tmp", prompt: "work", onText }, { supervise: supervise as never, platform: "linux" });
+  const rejected = expect(pending).rejects.toThrow("broken");
+  if (cause === "result") child.stdout.write('{"event":"result","result":{"status":"ERROR","error":"broken"}}\n');
+  else child.stdin.emit("error", new Error("broken"));
+  await rejected;
+  expect(supervise.mock.results[0].value.kill).toHaveBeenCalledWith("SIGKILL");
+  child.stdout.write(`${RESULT}\n`);
+  expect(onText).not.toHaveBeenCalled();
+  expect(vi.getTimerCount()).toBe(0);
+  vi.useRealTimers();
+});

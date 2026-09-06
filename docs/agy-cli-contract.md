@@ -154,8 +154,9 @@ turns may legitimately stream beyond two minutes.
 > **Status: deferred.** `fn_*` custom tools are **not available** to agy
 > sessions today. A session with Fusion `fn_*` custom tools records
 > `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
-> code Cursor uses, so the engine surfaces it consistently) and the turn still
-> runs tool-less. The `FNXC:AgyMcpBridge 2026-09-06` block in
+> code Cursor uses, so the engine surfaces it consistently). Requests requiring
+> Fusion or other custom tools fail before native work starts. Native-only sessions
+> remain available. The `FNXC:AgyMcpBridge 2026-09-06` block in
 > `runtime-adapter.ts` documents the deferral in-place. The session types
 > (`toolBridge`, `mcpLease`, `mcpServerKey`) remain declared so a future bridge
 > worker can populate them without changing `types.ts`.
@@ -214,3 +215,26 @@ A future `tool-mapping` layer must extract `parameters.ToolName` and match
 - Binary / CLI name: `agy`
 - Checksum: `upstream-pending-verification` (installer-managed, self-updating
   via `agy update`; local provenance `1.1.27` verified 2026-09-06)
+
+## Surface Enumeration
+
+The lifecycle audit covers direct transport and runtime-adapter entry points;
+pre-aborted, mid-turn aborted, overlapping, successful, and failed turns;
+result errors and stdin failures; output arriving after terminal failure;
+new and resumed conversations; and both `fusionTools` and `customTools`.
+Coding and readonly native modes keep their existing CLI flags. No per-session
+MCP bridge is available, so neither mode can provide Fusion task completion or
+verification tools. Callers needing these tools must use another runtime.
+
+## Symptom Verification
+
+- **Original symptom:** caller cancellation was ignored, overlapping turns lost
+  their cancellation controller, and terminal errors left native work alive.
+  Custom-only tool requests were silently dropped.
+- **Exact reproduction:** runtime-adapter behavioral tests supply pre-aborted
+  and active AbortSignals, overlap two turns, and request each custom-tool
+  surface. Transport tests emit a failed result or stdin error followed by
+  late output while using fake timers and a supervised child seam.
+- **Assertion it is gone:** cancellation rejects without recording successful
+  history, overlap is refused, unavailable tools fail before spawn, errors kill
+  the supervised child, and late output emits no callbacks or new timers.

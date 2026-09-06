@@ -33,7 +33,13 @@ carries (find them with `git log --oneline upstream/main..main`):
 - `plugins/fusion-plugin-droid-runtime/src/sdk-provider.ts` — official SDK
   transport replaces obsolete print flags. Fusion owns tool execution; only
   Droid's metadata-only ToolSearch helper may run internally. The provider
-  currently accepts text input. Live text and host tool interception are tested.
+  forwards JPEG, PNG, GIF, and WebP attachments from user and tool-result history
+  through the official SDK image input, with ordered transcript references. It
+  checks the selected model's live image capability before starting an image turn.
+  The default `glm-5.3-flash` is text-only (`noImageSupport: true` in the official
+  SDK catalog observed on 2026-09-06); it is never silently replaced. Live text
+  and host tool interception are tested. Image transport is covered with SDK
+  fixtures; no non-default model was used for a live image turn.
 - `packages/cli/package.json` — workspace deps for `@fusion/devin-cli`,
   `@fusion/droid-cli`, and `@fusion-plugin-examples/droid-runtime`. Without
   them `resolveVendoredDevinCliEntry` / `resolveVendoredDroidCliEntry`
@@ -181,3 +187,20 @@ Live smoke on Devin 3000.6.14 with `glm-5-2` completed three turns:
 `fn_run_verification` → successful mock tool result → `fn_task_done` → successful
 mock tool result → `SMOKE-OK`. No real board card or verification command was
 mutated by this integration smoke.
+
+
+### Droid image attachment contract
+
+The [official TypeScript SDK image input](https://docs.factory.ai/sdk/typescript#images-and-documents)
+accepts base64 bytes through `session.stream(..., { images })`. Fusion forwards
+bytes directly, without reading image paths, fetching URLs, or creating temporary
+image files. Every image is replaced by a numbered reference in the flattened
+transcript; the matching ordered SDK attachments include historical user and
+tool-result images. Unsupported media or malformed base64 fail before a CLI starts.
+Explicit model discovery advertises images only when current SDK metadata says
+`noImageSupport: false` and the model is enabled. Registration remains probe-free.
+
+Surface coverage: mixed text/images, multiple images, duplicates, earlier user
+turns, tool results, malformed or external sources, image-capable/text-only/unknown/
+disabled model metadata, cancellation, and capability-discovery failures. Text-only
+turns retain their existing protocol without an extra catalog request.

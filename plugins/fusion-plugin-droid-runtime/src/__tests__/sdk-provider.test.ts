@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { PiContext } from "../prompt-builder.js";
 const state = vi.hoisted(() => ({
-  create: vi.fn(), connect: vi.fn(), close: vi.fn(), construct: vi.fn(),
+  imageModels: vi.fn(), create: vi.fn(), connect: vi.fn(), close: vi.fn(), construct: vi.fn(),
   listTools: vi.fn(), settings: vi.fn(), interrupt: vi.fn(), sessionClose: vi.fn(), stream: vi.fn(),
 }));
 vi.mock("@factory/droid-sdk/node", async (original) => {
@@ -16,6 +16,7 @@ vi.mock("@factory/droid-sdk/node", async (original) => {
     },
   };
 });
+vi.mock("../sdk-models.js", () => ({ discoverDroidImageModels: state.imageModels }));
 import { streamViaSdk, killAllSdkSessions } from "../sdk-provider.js";
 const model = { id: "glm-5.3-flash", provider: "droid-cli", api: "droid-cli" } as Model<Api>;
 const context: PiContext = { systemPrompt: "operator rules", messages: [{ role: "user", content: "hello" }] };
@@ -30,6 +31,7 @@ async function collect(ctx = context, options: Parameters<typeof streamViaSdk>[2
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  state.imageModels.mockResolvedValue([]);
   state.connect.mockResolvedValue(undefined);
   state.close.mockResolvedValue(undefined);
   state.create.mockResolvedValue(session);
@@ -125,9 +127,27 @@ it.each(["abort", "timeout", "teardown"])("closes a pending transport on %s", as
   expect(state.close).toHaveBeenCalled();
   expect(state.create).not.toHaveBeenCalled();
 });
-it("rejects image input explicitly before creating a process", async () => {
+it("rejects malformed image data before creating a process", async () => {
   const result = await streamViaSdk(model, { messages: [{ role: "user", content: [{ type: "image", data: "abc", mimeType: "image/png" }] }] }).result();
   expect(result.stopReason).toBe("error");
-  expect(result.errorMessage).toContain("image input");
+  expect(result.errorMessage).toContain("invalid base64");
   expect(state.construct).not.toHaveBeenCalled();
+});
+
+it("forwards images from historical user and tool results to a capable selected model", async () => {
+  state.imageModels.mockResolvedValue([model.id]);
+  const image = { type: "image", data: "aW1hZ2U=", mimeType: "image/png" };
+  const ctx = { messages: [{ role: "user", content: [image] }, { role: "toolResult", content: [image] }, { role: "user", content: "compare" }] };
+  const { result } = await collect(ctx);
+  expect(result.stopReason).toBe("stop");
+  expect(state.stream.mock.calls[0][1].images).toEqual([
+    { type: "base64", data: image.data, mediaType: image.mimeType },
+    { type: "base64", data: image.data, mediaType: image.mimeType },
+  ]);
+  expect(state.stream.mock.calls[0][0]).not.toContain(image.data);
+});
+it("refuses images on a text-only model without starting a paid turn", async () => {
+  const result = await streamViaSdk(model, { messages: [{ role: "user", content: [{ type: "image", data: "aW1hZ2U=", mimeType: "image/png" }] }] }).result();
+  expect(result.errorMessage).toContain("does not advertise image support");
+  expect(state.create).not.toHaveBeenCalled();
 });

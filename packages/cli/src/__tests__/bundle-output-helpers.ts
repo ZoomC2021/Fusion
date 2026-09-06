@@ -42,6 +42,8 @@ export const droidPluginMcpServerPath = join(
   "mcp-schema-server.cjs",
 );
 
+export const agyPluginMcpServerPath = join(cliRoot, "dist", "plugins", "fusion-plugin-agy-runtime", "mcp-schema-server.cjs");
+
 export const dashboardClientStubMarker = "Dashboard assets not built";
 
 export const requiredBuildAssetPaths = [
@@ -55,6 +57,7 @@ export const requiredBuildAssetPaths = [
   compoundEngineeringSkillPath,
   openclawMcpSchemaServerPath,
   droidPluginMcpServerPath,
+  agyPluginMcpServerPath,
 ] as const;
 
 function runBuildCommand(command: string, cwd: string) {

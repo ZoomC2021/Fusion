@@ -36,6 +36,7 @@ const RUNTIME_PLUGINS_WITH_MCP_SCHEMA_SERVER = new Set([
   // FNXC:AcpCustomTools 2026-08-16-00:30: generic ACP runtime ships the same
   // bridge asset for Hermes ACP / Prime fn_* tool forwarding.
   "fusion-plugin-acp-runtime",
+  "fusion-plugin-agy-runtime",
 ]);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -261,7 +262,10 @@ export async function bundlePluginEntry({ pluginId, srcDir, destDir, withMcpAsse
   }
 
   if (withMcpAsset) {
-    const mcpServerAsset = join(srcDir, "src", "mcp-schema-server.cjs");
+    const mcpSourceDir = pluginId === "fusion-plugin-agy-runtime"
+      ? join(workspaceRoot, "plugins", "fusion-plugin-acp-runtime")
+      : srcDir;
+    const mcpServerAsset = join(mcpSourceDir, "src", "mcp-schema-server.cjs");
     if (!existsSync(mcpServerAsset)) {
       throw new Error(
         `[tsup] Missing required bridge asset for ${pluginId} at ${mcpServerAsset}; expected committed source file mcp-schema-server.cjs.`,

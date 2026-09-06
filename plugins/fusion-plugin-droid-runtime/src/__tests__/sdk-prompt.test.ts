@@ -36,3 +36,14 @@ describe("Droid SDK image attachments", () => {
     expect(result.prompt).toContain(JSON.stringify(messages));
   });
 });
+
+it.each([0, 1, 2])("accepts multi-megabyte base64 with %s padding bytes without overflowing the stack", (padding) => {
+  const data = "A".repeat(8_000_000 - padding) + "=".repeat(padding);
+  const { prompt, images } = buildSdkPrompt({ messages: [{ role: "user", content: [{ ...image, data }] }] });
+  expect(images[0].data).toBe(data);
+  expect(prompt.length).toBeLessThan(500);
+});
+
+it.each(["=AAA", "A=AA", "AA=A", "A===", "AAAA=", "AAA", "AA-A", "AA_A", "AAA\n"])("rejects invalid base64 alphabet, padding or length: %j", (data) => {
+  expect(() => buildSdkPrompt({ messages: [{ role: "user", content: [{ ...image, data }] }] })).toThrow("invalid base64");
+});

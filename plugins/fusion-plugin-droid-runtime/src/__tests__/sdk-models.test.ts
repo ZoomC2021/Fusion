@@ -32,3 +32,20 @@ it.each(["timeout", "abort"])("closes stalled discovery on %s", async (mode) => 
   await assertion;
   expect(state.models).not.toHaveBeenCalled();
 });
+
+it.each(["timeout", "abort"])("rejects promptly on %s when closing does not settle a pending catalog RPC", async (mode) => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  let rejectRpc: (error: Error) => void = () => {};
+  state.models.mockImplementation(() => new Promise((_, reject) => { rejectRpc = reject; }));
+  let outcome: unknown;
+  void discoverDroidImageModels({ timeoutMs: 10, signal: controller.signal }).catch(error => { outcome = error; });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(state.models).toHaveBeenCalledOnce();
+  if (mode === "abort") controller.abort(new Error("cancelled"));
+  await vi.advanceTimersByTimeAsync(11);
+  expect(outcome).toBeInstanceOf(Error);
+  expect(state.close).toHaveBeenCalled();
+  rejectRpc(new Error("late SDK rejection"));
+  await vi.advanceTimersByTimeAsync(0);
+});

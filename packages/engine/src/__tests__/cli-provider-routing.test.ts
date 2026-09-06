@@ -49,6 +49,12 @@ describe("CLI provider routing census", () => {
     }
   });
 
+  it("keeps Devin on the pi registry for primary and fallback selection", () => {
+    expect(deriveCliRuntimeHint({ runtimeOptions: options({ defaultProvider: "devin-cli" }), grokApiKeyVisible: false })).toBeUndefined();
+    const original = options({ defaultProvider: "openai", fallbackProvider: "devin-cli", fallbackModelId: "glm-5-2" });
+    expect(dropUnsupportedCliFallback(original).options).toBe(original);
+  });
+
   it("keeps Grok's visible-key and explicit-hint fallback policy", () => {
     expect(deriveCliRuntimeHint({ runtimeOptions: options({ defaultProvider: "grok-cli" }), pluginRunner: runner(false) as never, grokApiKeyVisible: true })).toBeUndefined();
     expect(() => assertExplicitCliRuntimeHint({ runtimeHint: "grok", runtimeOptions: options({ defaultProvider: "grok-cli" }), pluginRunner: runner(false) as never })).not.toThrow();

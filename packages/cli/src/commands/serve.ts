@@ -1,3 +1,4 @@
+import { resolveDevinCliExtensions } from "./devin-cli-extension.js";
 /**
  * Headless Fusion Node server command.
  *
@@ -816,14 +817,14 @@ export async function runServe(
     setHostExtensionPaths(selfExtensionPaths);
 
     const extensionsResult = await discoverAndLoadExtensions(
-      [
+      resolveDevinCliExtensions([
         ...selfExtensionPaths,
         ...getEnabledPiExtensionPaths(primaryCwd),
         ...packageExtensionPaths,
         ...claudeCliPaths,
         ...droidCliPaths,
         ...llamaCppPaths,
-      ],
+      ], await store.getGlobalSettingsStore().getSettings()),
       primaryCwd,
       join(primaryCwd, ".fusion", "disabled-auto-extension-discovery"),
     );

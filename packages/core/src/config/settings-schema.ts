@@ -343,6 +343,7 @@ export const DEFAULT_GLOBAL_SETTINGS = {
   modelOnboardingComplete: undefined,
   useClaudeCli: undefined,
   useDroidCli: undefined,
+  useDevinCli: undefined,
   useLlamaCpp: undefined,
   useCursorCli: undefined,
   /*

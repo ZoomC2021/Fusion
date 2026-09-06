@@ -514,6 +514,17 @@ export function reconcileDroidCliPaths(
   return filtered;
 }
 
+/* FNXC:DevinCli 2026-09-06-04:47:
+ * Explicit Off removes vendored and external Devin providers. Otherwise keep
+ * exactly one vendored registration; undefined preserves this fork's default On.
+ */
+export function reconcileDevinCliPaths(paths: readonly string[], vendoredPath: string | null, enabled = true): string[] {
+  const isDevin = (path: string) => path === vendoredPath || /(^|[/\\])devin-cli([/\\]|$)/i.test(path);
+  if (!enabled) return [...new Set(paths.filter(path => !isDevin(path)))];
+  if (!vendoredPath) return [...new Set(paths)];
+  return [vendoredPath, ...new Set(paths.filter(path => !isDevin(path)))];
+}
+
 function getDisplayPathWithinRoot(root: string, targetPath: string): string | null {
   const usesWindowsPaths = /^[A-Za-z]:[\\/]/.test(root) || /^[A-Za-z]:[\\/]/.test(targetPath) || root.includes("\\") || targetPath.includes("\\");
   const pathApi = usesWindowsPaths ? win32 : { relative, isAbsolute, sep };

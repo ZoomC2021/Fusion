@@ -687,6 +687,8 @@ export interface GlobalSettings {
    *  by the dashboard auth toggle. Setting this field explicitly (true/false)
    *  always wins. */
   useDroidCli?: boolean;
+  /** Devin CLI routing. Undefined preserves this fork's existing enabled default; false disables new turns. */
+  useDevinCli?: boolean;
   /** When true, enable llama.cpp model-provider support (provider ID: `llama-server`)
    *  via Fusion's bundled `@fusion/pi-llama-cpp` extension.
    *

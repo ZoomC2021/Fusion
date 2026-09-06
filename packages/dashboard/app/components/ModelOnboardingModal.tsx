@@ -26,6 +26,7 @@ import type { ToastType } from "../hooks/useToast";
 import { FloatingWindow } from "./FloatingWindow";
 import { CustomModelDropdown } from "./CustomModelDropdown";
 import { ProviderIcon } from "./ProviderIcon";
+import { DevinCliProviderCard } from "./DevinCliProviderCard";
 import { ClaudeCliProviderCard } from "./ClaudeCliProviderCard";
 import { CursorCliProviderCard } from "./CursorCliProviderCard";
 import { LlamaCppProviderCard } from "./LlamaCppProviderCard";
@@ -2378,6 +2379,8 @@ export function ModelOnboardingModal({
         />
       );
     }
+
+    if (provider.id === "devin-cli" && provider.type === "cli") return <DevinCliProviderCard key={provider.id} authenticated={provider.authenticated} onToggled={() => { void loadAuthStatus(); }}/>;
 
     if (provider.id === "claude-cli" && provider.type === "cli") {
       return (

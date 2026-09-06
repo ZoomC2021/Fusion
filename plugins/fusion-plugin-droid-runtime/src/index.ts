@@ -80,9 +80,9 @@ export {
   discoverDroidModelEntries,
   parseDroidModelEntriesFromHelp,
   validateCliPresenceAsync,
-  validateCliAuthAsync,
-  killAllProcesses,
 } from "./process-manager.js";
 export type { DroidModelEntry, DroidDiscoveryOptions } from "./process-manager.js";
 export { getCustomToolDefs, toolsFromContext, writeMcpConfig } from "./mcp-config.js";
 export type { McpToolDef } from "./mcp-config.js";
+
+export { killAllSdkSessions as killAllProcesses } from "./sdk-provider.js";

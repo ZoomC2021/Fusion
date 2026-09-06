@@ -89,11 +89,11 @@ describe("droid-cli extension entrypoint", () => {
     expect(config.baseUrl).toBe("droid-cli");
     expect(config.api).toBe("droid-cli");
     expect(config.apiKey).toBe("unused");
-    expect(config.models).toEqual([]);
+    expect(config.models).toEqual(expect.arrayContaining([expect.objectContaining({ id: "glm-5.3-flash" })]));
     expect(typeof config.streamSimple).toBe("function");
   });
 
-  it("runs validation once when a droid stream is actually used", async () => {
+  it("lets the SDK authenticate streams without spawning extra probe sessions", async () => {
     const registerProvider = vi.fn();
     const mockPi = {
       registerProvider,
@@ -112,8 +112,8 @@ describe("droid-cli extension entrypoint", () => {
     config.streamSimple({ id: "droid-pro" }, { messages: [] }, {});
     await flushAsyncRegistration();
 
-    expect(runtimeMocks.validateCliPresenceAsync).toHaveBeenCalledTimes(1);
-    expect(runtimeMocks.validateCliAuthAsync).toHaveBeenCalledTimes(1);
+    expect(runtimeMocks.validateCliPresenceAsync).not.toHaveBeenCalled();
+    expect(runtimeMocks.validateCliAuthAsync).not.toHaveBeenCalled();
     expect(runtimeMocks.discoverDroidModels).not.toHaveBeenCalled();
   });
 
@@ -149,33 +149,6 @@ describe("droid-cli extension entrypoint", () => {
     expect(mockPi.setActiveTools).toHaveBeenCalledWith(["find", "grep"]);
   });
 
-  it("warns but still registers provider when cli presence check fails", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    runtimeMocks.validateCliPresenceAsync.mockResolvedValue({
-      ok: false,
-      error: { message: "droid CLI missing" },
-    } as any);
-
-    const mockPi = {
-      registerProvider: vi.fn(),
-      on: vi.fn(),
-      getAllTools: vi.fn(() => []),
-      setActiveTools: vi.fn(),
-    };
-
-    const mod = await import("../../index");
-    mod.default(mockPi as never);
-    const config = mockPi.registerProvider.mock.calls[0]?.[1] as {
-      streamSimple: (model: unknown, context: unknown, options?: Record<string, unknown>) => unknown;
-    };
-    config.streamSimple({ id: "droid-pro" }, { messages: [] }, {});
-    await flushAsyncRegistration();
-
-    expect(warnSpy).toHaveBeenCalledWith("[droid-cli] droid CLI missing");
-    expect(runtimeMocks.validateCliAuthAsync).not.toHaveBeenCalled();
-    expect(mockPi.registerProvider).toHaveBeenCalledWith("droid-cli", expect.objectContaining({ models: [] }));
-  });
-
   it("falls back to empty models when discovery throws", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runtimeMocks.discoverDroidModels.mockRejectedValue(new Error("boom"));
@@ -189,7 +162,7 @@ describe("droid-cli extension entrypoint", () => {
     );
   });
 
-  it("wires context tools to mcp config and passes mcpConfigPath into streamViaCli", async () => {
+  it("passes context tools directly to the SDK without legacy config files", async () => {
     const registerProvider = vi.fn();
     const mockPi = {
       registerProvider,
@@ -218,12 +191,11 @@ describe("droid-cli extension entrypoint", () => {
 
     config.streamSimple({ id: "droid-pro" }, context, { temperature: 0.2 });
 
-    expect(runtimeMocks.toolsFromContext).toHaveBeenCalledWith(context.tools);
-    expect(runtimeMocks.writeMcpConfig).toHaveBeenCalledTimes(1);
+    expect(runtimeMocks.writeMcpConfig).not.toHaveBeenCalled();
     expect(runtimeMocks.streamViaCli).toHaveBeenCalledWith(
       { id: "droid-pro" },
       context,
-      expect.objectContaining({ temperature: 0.2, mcpConfigPath: expect.stringContaining("/tmp/droid-mcp-") }),
+      expect.objectContaining({ temperature: 0.2 }),
     );
   });
 
@@ -249,6 +221,6 @@ describe("droid-cli extension entrypoint", () => {
     config.streamSimple({ id: "droid-pro" }, { messages: [] }, {});
 
     expect(runtimeMocks.getCustomToolDefs).toHaveBeenCalledWith(mockPi);
-    expect(runtimeMocks.writeMcpConfig).toHaveBeenCalledTimes(1);
+    expect(runtimeMocks.streamViaCli).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ tools: [expect.objectContaining({ name: "fn_read", parameters: { type: "object" } })] }), expect.anything());
   });
 });

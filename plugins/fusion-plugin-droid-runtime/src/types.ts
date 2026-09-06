@@ -93,7 +93,19 @@ export interface DroidCallbacks {
   onToolEnd?: (toolName: string, isError: boolean, result?: unknown) => void;
 }
 
+export interface DroidHostTool {
+  name: string;
+  description?: string;
+  parameters?: unknown;
+  execute(id: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<unknown>;
+}
+
 export interface DroidSession {
+  tools: DroidHostTool[];
+  subscribe(handler: (event: unknown) => void): () => void;
+  emit(event: Record<string, unknown>): void;
+  cwd: string;
+  activeController?: AbortController;
   model: unknown;
   systemPrompt: string;
   messages: unknown[];
@@ -108,6 +120,7 @@ export interface DroidSession {
 export type AgentSession = DroidSession;
 
 export interface AgentRuntimeOptions {
+  customTools?: DroidHostTool[];
   cwd: string;
   systemPrompt: string;
   tools?: "coding" | "readonly";

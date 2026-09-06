@@ -10,4 +10,4 @@ This package preserves the historical pi extension entrypoint and wires runtime 
 ## Testing boundary
 
 - `packages/droid-cli/src/__tests__/index.test.ts` owns integration coverage for this shim entrypoint (`index.ts`) and verifies provider registration and wiring behavior.
-- Runtime internals (`streamViaCli`, CLI process handling, MCP schema generation, parsing, etc.) remain covered in the plugin package tests under `plugins/fusion-plugin-droid-runtime`.
+- Runtime internals (`streamViaCli`, SDK process handling, MCP schema generation, cancellation and terminal results) remain covered in the plugin package tests under `plugins/fusion-plugin-droid-runtime`.

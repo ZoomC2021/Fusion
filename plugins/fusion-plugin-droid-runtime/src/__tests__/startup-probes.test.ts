@@ -7,7 +7,7 @@ vi.mock("node:child_process", () => ({
   spawn: spawnMock,
 }));
 
-import { validateCliAuthAsync, validateCliPresenceAsync } from "../process-manager.js";
+import { validateCliPresenceAsync } from "../process-manager.js";
 
 function makeProbeProc() {
   const proc = new EventEmitter() as any;
@@ -64,26 +64,4 @@ describe("Droid startup validation probes", () => {
     expect(proc.kill).toHaveBeenCalledWith("SIGKILL");
   });
 
-  it("resolves false when `droid auth status` exits non-zero", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    spawnMock.mockImplementationOnce(() => {
-      const proc = makeProbeProc();
-      queueMicrotask(() => proc.emit("exit", 1));
-      return proc;
-    });
-
-    await expect(validateCliAuthAsync()).resolves.toBe(false);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("not authenticated"));
-    expect(spawnMock).toHaveBeenCalledWith("droid", ["auth", "status"], expect.objectContaining({ stdio: "ignore" }));
-  });
-
-  it("resolves false instead of rejecting when auth spawn throws synchronously", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    spawnMock.mockImplementationOnce(() => {
-      throw new Error("Real AI CLI launch blocked during tests: droid auth status");
-    });
-
-    await expect(validateCliAuthAsync()).resolves.toBe(false);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("not authenticated"));
-  });
 });

@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   streamViaCli,
   discoverDroidModels,
+  discoverDroidImageModels,
   killAllProcesses,
   getCustomToolDefs,
 } from "@fusion-plugin-examples/droid-runtime";
@@ -20,7 +21,8 @@ export async function discoverDroidProviderModels() {
       try {
         const ids = Array.from(new Set(await discoverDroidModels()));
         if (ids.length === 0) return [];
-        return toProviderModels(ids);
+        const imageModels = new Set(await discoverDroidImageModels().catch(() => []));
+        return toProviderModels(ids, imageModels);
       } catch (error) {
         console.warn("[droid-cli] model auto-discovery failed; registering provider with empty model list", error);
         return [];
@@ -30,12 +32,12 @@ export async function discoverDroidProviderModels() {
   return discoveredModelsPromise;
 }
 
-function toProviderModels(ids: string[]): DiscoveredModel[] {
+function toProviderModels(ids: string[], imageModels: Set<string>): DiscoveredModel[] {
   return ids.map((id) => ({
     id,
     name: id,
     reasoning: true,
-    input: ["text"] as Array<"text" | "image">,
+    input: (imageModels.has(id) ? ["text", "image"] : ["text"]) as Array<"text" | "image">,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow: 200_000,
     maxTokens: 8_192,

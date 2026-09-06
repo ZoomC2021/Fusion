@@ -9,6 +9,7 @@ type ToolDescriptor = {
 const runtimeMocks = vi.hoisted(() => {
   return {
     streamViaCli: vi.fn(() => ({ push: vi.fn(), end: vi.fn() })),
+    discoverDroidImageModels: vi.fn(async () => ["droid-max"]),
     discoverDroidModels: vi.fn(async () => ["droid-pro", "droid-max"]),
     validateCliPresenceAsync: vi.fn(async () => ({ ok: true })),
     validateCliAuthAsync: vi.fn(async () => undefined),
@@ -121,8 +122,8 @@ describe("droid-cli extension entrypoint", () => {
     const mod = await import("../../index");
 
     await expect(mod.discoverDroidProviderModels()).resolves.toEqual([
-      expect.objectContaining({ id: "droid-pro", name: "droid-pro", contextWindow: 200_000, maxTokens: 8_192 }),
-      expect.objectContaining({ id: "droid-max", name: "droid-max", contextWindow: 200_000, maxTokens: 8_192 }),
+      expect.objectContaining({ id: "droid-pro", name: "droid-pro", input: ["text"], contextWindow: 200_000, maxTokens: 8_192 }),
+      expect.objectContaining({ id: "droid-max", name: "droid-max", input: ["text", "image"], contextWindow: 200_000, maxTokens: 8_192 }),
     ]);
 
     expect(runtimeMocks.discoverDroidModels).toHaveBeenCalledTimes(1);

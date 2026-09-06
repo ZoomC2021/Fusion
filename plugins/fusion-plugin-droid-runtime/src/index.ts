@@ -86,3 +86,5 @@ export { getCustomToolDefs, toolsFromContext, writeMcpConfig } from "./mcp-confi
 export type { McpToolDef } from "./mcp-config.js";
 
 export { killAllSdkSessions as killAllProcesses } from "./sdk-provider.js";
+
+export { discoverDroidImageModels } from "./sdk-models.js";

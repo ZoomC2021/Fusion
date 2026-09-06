@@ -37,7 +37,10 @@ export class DroidRuntimeAdapter implements AgentRuntime {
     const signal = outerSignal ? AbortSignal.any([outerSignal, controller.signal]) : controller.signal;
     try {
       signal.throwIfAborted();
-      session.messages.push({ role: "user", content: prompt });
+      const images = (options as { images?: unknown[] } | undefined)?.images;
+      session.messages.push({ role: "user", content: Array.isArray(images) && images.length
+        ? [{ type: "text", text: prompt }, ...images]
+        : prompt });
       while (true) {
         signal.throwIfAborted();
         const stream = streamViaCli(model, {

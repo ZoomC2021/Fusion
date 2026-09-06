@@ -17,12 +17,14 @@ describe("DroidRuntimeAdapter", () => {
     // @ts-expect-error pi-ai runtime constructor is hidden by export-star declarations.
     const stream = new AssistantMessageEventStream();
     vi.mocked(streamViaSdk).mockReturnValueOnce(stream);
-    const pending = adapter.promptWithFallback(session, "hello");
+    const image = { type: "image", data: "aW1hZ2U=", mimeType: "image/png" };
+    const pending = adapter.promptWithFallback(session, "hello", { images: [image] });
     stream.push({ type: "text_delta", contentIndex: 0, delta: "a", partial: output() });
     stream.push({ type: "thinking_delta", contentIndex: 0, delta: "b", partial: output() });
     stream.push({ type: "done", reason: "stop", message: output() }); stream.end(); await pending;
     expect(onText).toHaveBeenCalledWith("a"); expect(onThinking).toHaveBeenCalledWith("b");
     expect(session.messages).toHaveLength(2);
+    expect(session.messages[0]).toMatchObject({ content: [{ type: "text", text: "hello" }, image] });
     expect(streamViaSdk).toHaveBeenLastCalledWith(expect.objectContaining({ id: "model" }), expect.objectContaining({ systemPrompt: "sys" }), expect.objectContaining({ cwd: "/workspace", binaryPath: "/bin/droid" }));
     expect(adapter.describeModel(session)).toBe("droid/model");
   });

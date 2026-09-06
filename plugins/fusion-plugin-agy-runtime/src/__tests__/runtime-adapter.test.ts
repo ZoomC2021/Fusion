@@ -62,15 +62,29 @@ describe("AgyRuntimeAdapter", () => {
     await expect(adapter.promptWithFallback(session, "x")).rejects.toThrow(/disposed/);
   });
 
-  it("records bridge-start-failed when fusionTools are requested (slice 2 seam)", async () => {
+  it("records bridge-start-failed when fusionTools are requested and the turn still runs tool-less (agy MCP bridge deferred)", async () => {
+    const spy = vi.spyOn(transport, "launchAgyPrompt").mockResolvedValueOnce({ conversationId: "c1", text: "ran without tools" });
     const adapter = new AgyRuntimeAdapter();
     const { session } = await adapter.createSession({
       cwd: "/tmp",
       systemPrompt: "system",
       fusionTools: [{ name: "fn_task_list", execute: vi.fn() }],
     });
+    // The degradation is first-class and tested: agy 1.1.27 cannot load
+    // per-session MCP servers in print/stream-json mode, so the session
+    // records bridge-start-failed (same code Cursor uses) and no bridge.
     expect(session.fusionToolBridgeError).toEqual({ reasonCode: "bridge-start-failed" });
     expect(session.toolBridge).toBeUndefined();
+    expect(session.mcpLease).toBeUndefined();
+    expect(session.mcpServerKey).toBeUndefined();
+    // The turn still runs tool-less — the bridge failure never blocks the prompt.
+    await adapter.promptWithFallback(session, "do something");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(session.messages).toEqual([
+      { role: "user", content: "do something" },
+      { role: "assistant", content: "ran without tools" },
+    ]);
+    spy.mockRestore();
   });
 
   it("does not record a bridge error when no fusionTools are requested", async () => {

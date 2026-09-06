@@ -37,6 +37,28 @@ agy folds reasoning into `usage.thinking_tokens` and emits no separate thinking 
 
 All turns use `superviseSpawn` with a disabled total lifetime cap (active coding turns may legitimately stream beyond two minutes). The Windows prompt transport prefers a direct executable; `.cmd`/`.bat` shims validate and reject cmd metacharacters before a quoted cmd launch, `.ps1` uses PowerShell `-File`, and unknown extensions fail loudly. `PI_AGY_CLI_FIRST_LINE_TIMEOUT_MS` (default 60000) and `PI_AGY_CLI_TIMEOUT_MS` (default 120000) optionally tune cold-start and inactivity guards; agy has no in-process cancel, so an `AbortSignal` kills the subprocess (SIGKILL on POSIX, taskkill tree on Windows) while the prior `conversationId` is retained so the next turn resumes.
 
-## Fusion MCP bridge (slice 2 — pending)
+## Fusion MCP bridge (fn_* tools) — deferred
 
-When a session has Fusion `fn_*` custom tools, Fusion will start a token-protected loopback bridge and stage a per-session entry. That bridge is not implemented in this slice; a session with `options.fusionTools?.length` records `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` for now (mirroring how Cursor degrades), with a `// TODO(agy-mcp-bridge)` seam in `runtime-adapter.ts`.
+`fn_*` custom tools are **not available** to agy sessions today. agy 1.1.27
+does not load workspace plugin MCP servers (`.agents/plugins/<name>/mcp_config.json`)
+in `--input-format stream-json --output-format stream-json` (print) mode — the
+only transport Fusion uses. The machine-wide global config
+(`~/.gemini/config/mcp_config.json`) is the only MCP path that loads in print
+mode, but writing it would leak Fusion `fn_*` tools across all agy sessions and
+operators on the host, so it is rejected.
+
+A session with `options.fusionTools?.length` records
+`fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same code
+Cursor uses, so the engine surfaces it consistently) and the turn still runs
+tool-less. The `FNXC:AgyMcpBridge 2026-09-06` block in `runtime-adapter.ts`
+documents the deferral in-place. The session types (`toolBridge`, `mcpLease`,
+`mcpServerKey`) remain declared so a future bridge worker can populate them
+without changing `types.ts`.
+
+See `docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md` for the
+full experiment matrix and the re-test procedure for newer agy releases. When
+agy gains per-session MCP support in print/stream-json mode, the bridge can
+proceed using the `call_mcp_tool` event shape captured in
+`src/__tests__/fixtures/agy-mcp-tool-call.stream.jsonl` (agy invokes MCP tools
+through the built-in `call_mcp_tool` tool with `parameters.ToolName` carrying
+the `fn_*` name — not a namespaced tool name like Cursor).

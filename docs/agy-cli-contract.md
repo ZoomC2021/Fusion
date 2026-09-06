@@ -151,22 +151,38 @@ turns may legitimately stream beyond two minutes.
 
 ## Fusion MCP bridge (fn_* tools)
 
-> **Status: in flight (slice 2).** At the time of writing the bridge is not yet
-> implemented in `fusion-plugin-agy-runtime`. A session with Fusion `fn_*`
-> custom tools records `fusionToolBridgeError = { reasonCode:
-> "bridge-start-failed" }` (mirroring how Cursor degrades) and the turn still
-> runs tool-less. A `// TODO(agy-mcp-bridge)` seam in `runtime-adapter.ts`
-> marks the integration point. The session types (`toolBridge`, `mcpLease`,
-> `mcpServerKey`) are already declared so the bridge worker can populate them
-> without importing a not-yet-created module.
+> **Status: deferred.** `fn_*` custom tools are **not available** to agy
+> sessions today. A session with Fusion `fn_*` custom tools records
+> `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
+> code Cursor uses, so the engine surfaces it consistently) and the turn still
+> runs tool-less. The `FNXC:AgyMcpBridge 2026-09-06` block in
+> `runtime-adapter.ts` documents the deferral in-place. The session types
+> (`toolBridge`, `mcpLease`, `mcpServerKey`) remain declared so a future bridge
+> worker can populate them without changing `types.ts`.
 
-The intended design (parallel to Cursor's `.cursor/mcp.json` lease): when a
-session has Fusion `fn_*` custom tools, Fusion starts a token-protected loopback
-bridge and stages a per-session entry under
-`.agents/plugins/fusion-custom-tools-<uuid>/` in the task worktree. agy receives
-the bridge entry so its tool calls route back to Fusion's `fn_*` tools. The
-lease is excluded from git while live and removed on disposal; a tracked config
-disables the bridge rather than risking a step-boundary commit.
+agy 1.1.27 does not load workspace plugin MCP servers
+(`.agents/plugins/<name>/mcp_config.json`) in
+`--input-format stream-json --output-format stream-json` (print) mode — the
+only transport Fusion uses. The machine-wide global config
+(`~/.gemini/config/mcp_config.json`) is the only MCP path that loads in print
+mode, but writing it would leak Fusion `fn_*` tools across all agy sessions and
+operators on the host, so it is rejected. Config-redirect experiments
+(`XDG_CONFIG_HOME`, `HOME` override with symlinked `antigravity-cli`,
+`ANTIGRAVITY_EXECUTABLE_DATA_DIR`, `--add-dir`, `--new-project`,
+`AGY_CLI_NEW_HARNESS`) all failed to load a per-session MCP config with working
+auth. See
+[`docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md`](./solutions/integration-issues/agy-mcp-print-mode-discovery.md)
+for the full experiment matrix and the re-test procedure for newer agy
+releases.
+
+When agy gains per-session MCP support in print/stream-json mode, the bridge
+can proceed using the `call_mcp_tool` event shape captured in
+`plugins/fusion-plugin-agy-runtime/src/__tests__/fixtures/agy-mcp-tool-call.stream.jsonl`:
+agy invokes MCP tools through the built-in `call_mcp_tool` tool with
+`parameters.ToolName` carrying the `fn_*` name and `parameters.ServerName`
+carrying the configured server name — not a namespaced tool name like Cursor.
+A future `tool-mapping` layer must extract `parameters.ToolName` and match
+`parameters.ServerName` to the session `serverKey`.
 
 ## Known limitations
 

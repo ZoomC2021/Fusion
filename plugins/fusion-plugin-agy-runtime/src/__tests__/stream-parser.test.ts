@@ -60,6 +60,27 @@ describe("parseAgyStreamLine", () => {
     expect(parseAgyStreamLine('{"event":"step_update","step_update":{"step_index":1,"state":"DONE","step_type":"agent_response","usage":{"total_tokens":1}}}')).toEqual({ kind: "unknown" });
   });
 
+  it("parses the agy call_mcp_tool shape (MCP tool call via parameters.ToolName/ServerName)", () => {
+    // Captured from a real agy 1.1.27 print/stream-json turn with a global MCP
+    // server. agy invokes MCP tools through the built-in call_mcp_tool tool;
+    // the fn_* name lives in parameters.ToolName, not in a namespaced tool_name.
+    // See src/__tests__/fixtures/agy-mcp-tool-call.stream.jsonl and
+    // docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md.
+    expect(parseAgyStreamLine('{"event":"step_update","step_update":{"step_index":4,"state":"ACTIVE","step_type":"tool","tool_name":"call_mcp_tool","tool_info":{"name":"call_mcp_tool","parameters":{"Arguments":{"message":"ping"},"ServerName":"testecho","ToolName":"fn_echo"}}}}')).toMatchObject({
+      kind: "tool-call-started",
+      name: "call_mcp_tool",
+      args: { Arguments: { message: "ping" }, ServerName: "testecho", ToolName: "fn_echo" },
+      isError: false,
+    });
+    expect(parseAgyStreamLine('{"event":"step_update","step_update":{"step_index":4,"state":"DONE","step_type":"tool","tool_name":"call_mcp_tool","tool_info":{"name":"call_mcp_tool","parameters":{"Arguments":{"message":"ping"},"ServerName":"testecho","ToolName":"fn_echo"},"output":"ECHO:ping"}}}')).toMatchObject({
+      kind: "tool-call-completed",
+      name: "call_mcp_tool",
+      args: { Arguments: { message: "ping" }, ServerName: "testecho", ToolName: "fn_echo" },
+      result: "ECHO:ping",
+      isError: false,
+    });
+  });
+
   it("does not throw for incomplete or unknown lines", () => {
     expect(parseAgyStreamLine("{")).toEqual({ kind: "unknown" });
     expect(parseAgyStreamLine("")).toEqual({ kind: "unknown" });

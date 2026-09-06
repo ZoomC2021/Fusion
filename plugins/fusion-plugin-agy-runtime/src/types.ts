@@ -12,11 +12,13 @@ export interface AgyBinaryStatus {
 }
 
 /*
-FNXC:AgyCli 2026-09-06-00:00:
-The fn_* tool bridge is added in slice 2 by a separate worker. These loose
-types are intentionally declared here so runtime-adapter.ts can carry the
-session fields the bridge will populate without importing a not-yet-created
-tool-bridge.ts. The bridge worker may narrow/replace them.
+FNXC:AgyMcpBridge 2026-09-06:
+The fn_* tool bridge is deferred: agy 1.1.27 does not load workspace plugin
+MCP servers in print/stream-json mode, and the machine-wide global config is
+rejected for cross-session isolation. These loose types remain intentionally
+declared so a future bridge worker (when agy gains per-session MCP support)
+can populate them without changing this file. See
+docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md.
 */
 export interface ToolLike {
   name: string;

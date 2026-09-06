@@ -55,10 +55,33 @@ export class AgyRuntimeAdapter implements AgentRuntime {
       },
     };
 
-    // TODO(agy-mcp-bridge): the fn_* tool bridge is added in slice 2 by a
-    // separate worker. Until then, a session with Fusion custom tools records
-    // a bridge-start-failed degradation so the engine surfaces it the same way
-    // Cursor degrades, and the turn still runs tool-less.
+    /*
+    FNXC:AgyMcpBridge 2026-09-06:
+    The fn_* tool bridge is intentionally NOT implemented. agy 1.1.27 does not
+    load workspace plugin MCP servers (`.agents/plugins/<name>/mcp_config.json`)
+    in `--input-format stream-json --output-format stream-json` (print) mode —
+    the only transport Fusion uses. Verified against the real 1.1.27 binary:
+    `agy plugin validate` accepts the plugin, but a print/stream-json turn
+    never registers its MCP server (`init.tools` lists `call_mcp_tool` but no
+    `fn_*` tool; the agent reports the server unavailable; `--log-file` shows
+    `declarative_config_loader.go: skipping component … empty component: prompt
+    section "mcp_servers"`). The only MCP path that loads in print mode is the
+    machine-wide `~/.gemini/config/mcp_config.json`, which the orchestrator
+    rejected because it would leak Fusion `fn_*` tools across all agy sessions
+    and operators on the host. Redirect experiments (XDG_CONFIG_HOME, HOME
+    override with symlinked antigravity-cli, ANTIGRAVITY_EXECUTABLE_DATA_DIR,
+    --add-dir, --new-project, --enable-plugins, AGY_CLI_NEW_HARNESS) all failed
+    to load a per-session MCP config with working auth. See
+    docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md for the
+    full experiment matrix and the re-test procedure for newer agy releases.
+
+    A session with Fusion custom tools therefore records
+    `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
+    code Cursor uses) so the engine surfaces it consistently, and the turn
+    still runs tool-less. The session types (`toolBridge`, `mcpLease`,
+    `mcpServerKey`) remain declared so a future bridge worker can populate them
+    without changing types.ts.
+    */
     if (options.fusionTools?.length) {
       session.fusionToolBridgeError = { reasonCode: "bridge-start-failed" };
     }

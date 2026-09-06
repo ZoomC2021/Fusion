@@ -1,3 +1,4 @@
+import { STATIC_MODELS as DEVIN_MODELS } from "@fusion/devin-cli/models";
 import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -284,6 +285,7 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
     let defaultModelId: string | undefined;
     let useClaudeCli = false;
     let useDroidCli = false;
+    let useDevinCli = true;
     let droidCliBinaryPath: string | undefined;
     let useLlamaCpp = false;
     let useCursorCli = false;
@@ -305,6 +307,7 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
         defaultModelId = globalSettings.defaultModelId;
         useClaudeCli = globalSettings.useClaudeCli === true;
         useDroidCli = globalSettings.useDroidCli === true;
+        useDevinCli = globalSettings.useDevinCli !== false;
         useLlamaCpp = globalSettings.useLlamaCpp === true;
         useCursorCli = (globalSettings as Record<string, unknown>).useCursorCli === true;
         /*
@@ -462,6 +465,7 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       if (!useClaudeCli) {
         models = models.filter((m) => m.provider !== "pi-claude-cli");
       }
+      if (!useDevinCli) models = models.filter(m => m.provider !== "devin-cli");
       if (!useDroidCli) {
         models = models.filter((m) => m.provider !== "droid-cli");
       }
@@ -668,13 +672,12 @@ export const registerModelRoutes: ApiRouteRegistrar = (ctx) => {
       if (useClaudeCli) configuredProviders.add("pi-claude-cli");
       if (useClaudeCli) configuredProviders.add(CLAUDE_PICKER_PROVIDER_ID);
       if (useDroidCli) configuredProviders.add(DROID_PICKER_PROVIDER_ID);
-      // FNXC:DevinCli (local addition): the vendored `@fusion/devin-cli`
-      // extension registers its provider (with models discovered from
-      // `devin models list --format json`) straight into the model registry,
-      // so allow-list it unconditionally here. When the `devin` binary is
-      // missing or discovery fails, the extension registers zero rows and
-      // this add is inert.
-      configuredProviders.add("devin-cli");
+      if (useDevinCli) {
+        configuredProviders.add("devin-cli");
+        const existing = new Set(models.filter(m => m.provider === "devin-cli").map(m => m.id));
+        for (const model of DEVIN_MODELS) if (!existing.has(model.id)) models.push({ ...model, provider: "devin-cli" });
+      }
+
       if (useLlamaCpp) configuredProviders.add("llama-server");
       // FNXC:ModelCatalog 2026-07-08-00:05 (FN-7696): allow-list "cursor-cli"
       // through the final filter whenever the toggle is on — independent of

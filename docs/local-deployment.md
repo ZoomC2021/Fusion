@@ -11,6 +11,20 @@ carries (find them with `git log --oneline upstream/main..main`):
 
 - `packages/devin-cli/` — vendored Devin CLI provider (free GLM/SWE models,
   ACP over `devin acp --model <id>`, session resume, usage tracking).
+  Registration is synchronous with three fallback free-model rows and no CLI
+  discovery spawn. `discoverDevinModels` remains an explicit discovery helper.
+  Rejected session loads recover once with full context; prompt failures and
+  load timeouts are not replayed. Workspace/model mismatches start fresh.
+  Fusion custom tools now return through pi's normal tool loop; native Devin
+  tool, thought, and plan activity streams into the dashboard. Per-session
+  atomic files and heartbeat locks replace shared-map writes; records expire
+  after 30 days and unlocked history is capped at 1,000 entries.
+  Settings → Authentication and onboarding expose Devin status and an enable
+  switch. Undefined `useDevinCli` preserves the fork's existing On default;
+  explicit Off hides models and refuses new turns, including cached providers.
+  Devin 3000.6.14 requires an isolated MCP config view in addition to ACP
+  `mcpServers`. The provider creates and removes that view per tool-bearing turn;
+  it never overwrites the user's or project's MCP configuration.
 - `packages/cli/package.json` — workspace deps for `@fusion/devin-cli`,
   `@fusion/droid-cli`, and `@fusion-plugin-examples/droid-runtime`. Without
   them `resolveVendoredDevinCliEntry` / `resolveVendoredDroidCliEntry`
@@ -124,3 +138,37 @@ Never run releases/`pnpm release`/publishes from task lanes — operator-only
   `FUSION_SERVER_PORT`; check `fork-desktop.sh`.
 - **Auth dialog on desktop** → paste the current `FUSION_DASHBOARD_TOKEN`.
 - **Port conflicts** → port 4040 is reserved repo-wide; the board uses 4321.
+
+## Devin provider regression coverage
+
+### Surface Enumeration
+
+- The shared provider factory used by all pi lanes: repeated registration and
+  explicit discovery failure must leave a usable catalog without startup spawns.
+- ACP sessions: absent and legacy entries, matching sessions, workspace/model
+  mismatches, rejected loads, load timeouts, initialize/prompt failures, and a
+  failed replacement. Replayed history must not enter the new assistant output.
+- Routing: primary and fallback Devin selections remain registry-based.
+- No UI affordances changed; desktop and mobile use the same server provider.
+  Both settings and onboarding expose the same enable/status behavior and
+  reuse the existing responsive provider-card primitives.
+
+### Symptom Verification
+
+- **Original symptom:** an expired ACP session returned `Error: cwd is not defined`;
+  every provider load ran discovery and failed discovery left zero model rows.
+- **Exact reproduction:** the provider test supplies a saved matching session,
+  rejects `session/load`, and inspects the fresh prompt and saved replacement.
+  Separate cases repeat registration and reject explicit discovery.
+- **Assertion it is gone:** the replacement returns `completed` with full context,
+  registration performs zero spawns with nonempty models, and failed prompts or
+  load timeouts never start replacement work.
+
+Run `pnpm --filter @fusion/devin-cli test` and
+`pnpm --filter @fusion/devin-cli typecheck`. The package typecheck is included by
+root `pnpm typecheck`; tests use an in-memory ACP peer without live AI calls.
+
+Live smoke on Devin 3000.6.14 with `glm-5-2` completed three turns:
+`fn_run_verification` → successful mock tool result → `fn_task_done` → successful
+mock tool result → `SMOKE-OK`. No real board card or verification command was
+mutated by this integration smoke.

@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { GIT_INSTALL_URL, isGhAvailable, isGhAuthenticated, probeGitCliStatus } from "@fusion/core";
 import { probeClaudeCli } from "../claude-cli-probe.js";
+import { probeDevinCli } from "../devin-cli-probe.js";
 import { probeDroidCli } from "../droid-cli-probe.js";
 import { probeCursorCliProvider, probeGrokCliProvider, probeOmpCliProvider } from "../runtime-provider-probes.js";
 import { probeLlamaCpp } from "../llama-cpp-probe.js";
@@ -67,6 +68,7 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
     "claude-cli",
     "pi-claude-cli",
     "droid-cli",
+    "devin-cli",
     "cursor-cli",
     "grok-cli",
     "omp-cli",
@@ -837,6 +839,13 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
         });
       }
 
+      if (store) {
+        const settings = await store.getGlobalSettingsStore().getSettings();
+        const probe = await probeDevinCli();
+        providers.push({ id: "devin-cli", name: "Devin CLI", type: "cli" as const,
+          authenticated: settings.useDevinCli !== false && probe.binary.available && probe.authenticated });
+      }
+
       // Inject the synthetic "Factory AI — via Droid CLI" provider.
       if (store) {
         let droidEnabled = false;
@@ -1118,6 +1127,28 @@ export const registerAuthRoutes: ApiRouteRegistrar = (ctx) => {
       }
       rethrowAsApiError(err);
     }
+  });
+
+  router.get("/providers/devin-cli/status", async (req, res) => {
+    try {
+      const probe = await probeDevinCli(req.query?.refresh === "1");
+      const enabled = store ? (await store.getGlobalSettingsStore().getSettings()).useDevinCli !== false : false;
+      res.json({ ...probe, enabled, ready: enabled && probe.binary.available && probe.authenticated });
+    } catch (error) { rethrowAsApiError(error); }
+  });
+
+  router.post("/auth/devin-cli", async (req, res) => {
+    try {
+      if (!store) throw new ApiError(500, "Settings store unavailable");
+      const enabled = req.body?.enabled;
+      if (typeof enabled !== "boolean") throw badRequest("enabled must be a boolean");
+      if (enabled && !(await probeDevinCli()).binary.available) throw badRequest("Install Devin CLI on the Fusion server first.");
+      await store.updateGlobalSettings({ useDevinCli: enabled });
+      invalidateAllGlobalSettingsCaches();
+      for (const engine of options?.engineManager?.getAllEngines().values() ?? []) engine.getTaskStore().getGlobalSettingsStore().invalidateCache();
+      invalidateModelsAfterCredentialMutation();
+      res.json({ enabled, restartRequired: false });
+    } catch (error) { rethrowAsApiError(error); }
   });
 
   router.post("/auth/droid-cli", async (req, res) => {

@@ -329,6 +329,9 @@ importers:
       '@fusion/core':
         specifier: workspace:*
         version: link:../core
+      '@fusion/devin-cli':
+        specifier: workspace:*
+        version: link:../devin-cli
       '@fusion/engine':
         specifier: workspace:*
         version: link:../engine
@@ -552,7 +555,33 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.1)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@6.4.1(@types/node@25.9.5)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
 
-  packages/devin-cli: {}
+  packages/devin-cli:
+    dependencies:
+      '@earendil-works/pi-ai':
+        specifier: 0.84.4
+        version: 0.84.4(@modelcontextprotocol/sdk@1.28.0(zod@4.4.3))(ws@8.21.3)(zod@4.4.3)
+      '@fusion-plugin-examples/acp-runtime':
+        specifier: workspace:*
+        version: link:../../plugins/fusion-plugin-acp-runtime
+      '@fusion/core':
+        specifier: workspace:*
+        version: link:../core
+      proper-lockfile:
+        specifier: ^4.1.2
+        version: 4.1.2
+    devDependencies:
+      '@types/node':
+        specifier: ^25.5.2
+        version: 25.9.5
+      '@types/proper-lockfile':
+        specifier: ^4.1.4
+        version: 4.1.4
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.1)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@6.4.1(@types/node@25.9.5)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/droid-cli:
     dependencies:

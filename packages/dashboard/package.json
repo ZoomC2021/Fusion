@@ -153,7 +153,8 @@
     "remark-gfm": "^4.0.1",
     "unified": "^11.0.5",
     "ws": "^8.18.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@fusion/devin-cli": "workspace:*"
   },
   "optionalDependencies": {
     "sherpa-onnx-node": "1.13.4"

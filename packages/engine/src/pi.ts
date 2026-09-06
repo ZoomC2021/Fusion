@@ -46,6 +46,8 @@ import {
   getProjectRootFromWorktree,
   reconcileClaudeCliPaths,
   reconcileDroidCliPaths,
+  reconcileDevinCliPaths,
+  GlobalSettingsStore,
   mergeBuiltInGrokProviderModels,
   mergeBuiltInZaiProviderModels,
   mergeSupplementalAnthropicModels,
@@ -1634,16 +1636,11 @@ async function registerExtensionProviders(cwd: string, modelRegistry: ModelRegis
       vendoredDroidCli,
     );
 
-    // Vendored `@fusion/devin-cli` extension (local addition): load it when
-    // the package is present so the `devin-cli` provider registers without
-    // requiring a user-level extension install.
-    const vendoredDevinCli = resolveVendoredDevinCliEntry();
-    if (vendoredDevinCli && !doubleReconciledPaths.includes(vendoredDevinCli)) {
-      doubleReconciledPaths.push(vendoredDevinCli);
-    }
+    const devinEnabled = (await new GlobalSettingsStore().getSettings()).useDevinCli !== false;
+    const providerPaths = reconcileDevinCliPaths(doubleReconciledPaths, resolveVendoredDevinCliEntry(), devinEnabled);
 
     const extensionsResult = await discoverAndLoadExtensions(
-      doubleReconciledPaths,
+      providerPaths,
       cwd,
       join(resolvePiExtensionProjectRoot(cwd), ".fusion", "disabled-auto-extension-discovery"),
     );

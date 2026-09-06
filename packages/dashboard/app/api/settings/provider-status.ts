@@ -915,3 +915,12 @@ export function removeProviderInstance(provider: string, instance: string): Prom
   return api(`/auth/providers/${encodeURIComponent(provider)}/instances/${encodeURIComponent(instance)}`, { method: "DELETE" });
 }
 
+
+export interface DevinCliStatus {
+  enabled: boolean;
+  ready: boolean;
+  authenticated: boolean;
+  binary: { available: boolean; version?: string; reason?: string };
+}
+export const fetchDevinCliStatus = (refresh = false) => api<DevinCliStatus>(`/providers/devin-cli/status${refresh ? "?refresh=1" : ""}`);
+export const setDevinCliEnabled = (enabled: boolean) => api<{ enabled: boolean; restartRequired: boolean }>("/auth/devin-cli", { method: "POST", body: JSON.stringify({ enabled }) });

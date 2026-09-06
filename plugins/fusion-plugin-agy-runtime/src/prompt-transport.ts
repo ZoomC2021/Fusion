@@ -20,6 +20,7 @@ export interface AgyPromptCallbacks {
 
 export interface AgyPromptInput extends AgyPromptCallbacks {
   binary?: string;
+  scopedMcp?: { configPath: string; targetPath: string };
   model?: string;
   cwd: string;
   tools?: "coding" | "readonly";
@@ -83,6 +84,11 @@ export async function launchAgyPrompt(input: AgyPromptInput, deps: AgyPromptDepe
       command = (deps.resolvePowerShell ?? resolvePowerShellExecutable)();
       launchArgs = ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", target, ...args];
     }
+  }
+  if (input.scopedMcp) {
+    if (platform !== "linux") throw new Error("Antigravity scoped MCP requires Linux Bubblewrap.");
+    command = "/usr/bin/bwrap";
+    launchArgs = ["--die-with-parent", "--bind", "/", "/", "--ro-bind", input.scopedMcp.configPath, input.scopedMcp.targetPath, "--", target, ...args];
   }
   let supervised: SupervisedChild;
   try {

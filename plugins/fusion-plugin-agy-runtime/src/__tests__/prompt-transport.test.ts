@@ -227,3 +227,18 @@ it.each(["result", "stdin"])("reaps %s failures and ignores late output without 
   expect(vi.getTimerCount()).toBe(0);
   vi.useRealTimers();
 });
+
+it("mounts the scoped MCP file only inside the supervised Linux process", async () => {
+  const {child, supervise} = fakeSupervisor();
+  const promise = launchAgyPrompt({cwd: "/tmp", prompt: "hello", scopedMcp: {configPath: "/private/config", targetPath: "/host/config"}}, {supervise: supervise as never, platform: "linux"});
+  expect(supervise).toHaveBeenCalledWith("/usr/bin/bwrap", expect.arrayContaining(["--die-with-parent", "--bind", "/", "/", "--ro-bind", "/private/config", "/host/config", "--", "agy"]), expect.objectContaining({shell:false}));
+  child.stdout.write(`${RESULT}\n`);
+  child.emit("close", 0);
+  await promise;
+});
+
+it("never launches scoped MCP without mount isolation on unsupported platforms", async () => {
+  const {supervise} = fakeSupervisor();
+  await expect(launchAgyPrompt({cwd:"/tmp", prompt:"work", scopedMcp:{configPath:"/private/config",targetPath:"/host/config"}}, {supervise:supervise as never,platform:"darwin"})).rejects.toThrow("Linux Bubblewrap");
+  expect(supervise).not.toHaveBeenCalled();
+});

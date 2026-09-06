@@ -11,7 +11,7 @@ symptoms:
   - "init.tools lists call_mcp_tool but no fn_* tool; the agent reports the MCP server unavailable"
   - "--log-file shows declarative_config_loader.go: skipping component … empty component: prompt section \"mcp_servers\""
 root_cause: upstream_feature_gap
-resolution_type: deferred
+resolution_type: platform_workaround
 severity: high
 tags: [agy, antigravity-cli, mcp, workspace-plugin, print-mode, stream-json, fn-tools, runtime-plugin]
 related_components: [tooling, model-runtime]
@@ -125,13 +125,27 @@ Implications for any future bridge (if agy gains workspace-plugin support):
   tool-call-started/completed events; the `call_mcp_tool` shape needs no new
   event kind, only that the mapping layer read `args.ToolName`.
 
-## Resolution: deferred
+## Resolution: Linux per-process mount isolation
 
-The bridge is intentionally not implemented. A session with Fusion custom
-tools records `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }`
-(the same code Cursor uses, so the engine surfaces it consistently) and the
-turn still runs tool-less. The `FNXC:AgyMcpBridge 2026-09-06` block in
-`runtime-adapter.ts` documents the deferral in-place.
+On 2026-09-06, agy 1.1.27 with `gemini-3.7-flash-high` successfully invoked
+`fn_scoped_echo` through a private Bubblewrap mount and returned the server's
+marker. The host config remained untouched. `bwrap --bind / / --ro-bind
+<temporary-config> <real-global-config> -- agy ...` makes the global path resolve
+to a per-turn file only inside the child namespace. The target must already
+exist; Fusion refuses to create it through the shared root mount.
+
+The initial diagnostic server silently ignored `server/discover`, which current
+agy sends before `initialize`. Answering unknown requests with JSON-RPC -32601
+allowed negotiation to `initialize` / `tools/list` / `tools/call`. The existing
+Fusion MCP schema server already implements this fallback. Merely seeing the
+server in `agy mcp list` does not prove the model can invoke it.
+
+Fusion now uses this Linux workaround with the existing authenticated host
+bridge, independent temporary configs for parallel turns, and cancellation plus
+terminal cleanup. Other platforms still require upstream per-run MCP support.
+The upstream gap is tracked in
+https://github.com/google-antigravity/antigravity-cli/issues/342 and project-local
+config discovery in https://github.com/google-antigravity/antigravity-cli/issues/60.
 
 ## Re-test procedure for newer agy releases
 

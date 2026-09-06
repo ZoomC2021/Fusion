@@ -151,39 +151,22 @@ turns may legitimately stream beyond two minutes.
 
 ## Fusion MCP bridge (fn_* tools)
 
-> **Status: deferred.** `fn_*` custom tools are **not available** to agy
-> sessions today. A session with Fusion `fn_*` custom tools records
-> `fusionToolBridgeError = { reasonCode: "bridge-start-failed" }` (the same
-> code Cursor uses, so the engine surfaces it consistently). Requests requiring
-> Fusion or other custom tools fail before native work starts. Native-only sessions
-> remain available. The `FNXC:AgyMcpBridge 2026-09-06` block in
-> `runtime-adapter.ts` documents the deferral in-place. The session types
-> (`toolBridge`, `mcpLease`, `mcpServerKey`) remain declared so a future bridge
-> worker can populate them without changing `types.ts`.
+Linux tool-bearing turns now start the authenticated Fusion MCP bridge and mount
+its private config read-only over the existing global MCP config path inside a
+Bubblewrap child namespace. Host config bytes remain unchanged. Each turn has an
+independent token/config, and completion, failure, or cancellation cleans up both.
 
-agy 1.1.27 does not load workspace plugin MCP servers
-(`.agents/plugins/<name>/mcp_config.json`) in
-`--input-format stream-json --output-format stream-json` (print) mode — the
-only transport Fusion uses. The machine-wide global config
-(`~/.gemini/config/mcp_config.json`) is the only MCP path that loads in print
-mode, but writing it would leak Fusion `fn_*` tools across all agy sessions and
-operators on the host, so it is rejected. Config-redirect experiments
-(`XDG_CONFIG_HOME`, `HOME` override with symlinked `antigravity-cli`,
-`ANTIGRAVITY_EXECUTABLE_DATA_DIR`, `--add-dir`, `--new-project`,
-`AGY_CLI_NEW_HARNESS`) all failed to load a per-session MCP config with working
-auth. See
-[`docs/solutions/integration-issues/agy-mcp-print-mode-discovery.md`](./solutions/integration-issues/agy-mcp-print-mode-discovery.md)
-for the full experiment matrix and the re-test procedure for newer agy
-releases.
+Requirements: executable `/usr/bin/bwrap`, permitted mount namespaces, and an
+existing `~/.gemini/config/mcp_config.json`. Other platforms and missing
+prerequisites fail explicitly before unbridged native work starts. Native-only
+sessions continue to work without Bubblewrap. This mount isolates configuration;
+it does not restrict the native agent's existing filesystem permissions.
 
-When agy gains per-session MCP support in print/stream-json mode, the bridge
-can proceed using the `call_mcp_tool` event shape captured in
-`plugins/fusion-plugin-agy-runtime/src/__tests__/fixtures/agy-mcp-tool-call.stream.jsonl`:
-agy invokes MCP tools through the built-in `call_mcp_tool` tool with
-`parameters.ToolName` carrying the `fn_*` name and `parameters.ServerName`
-carrying the configured server name — not a namespaced tool name like Cursor.
-A future `tool-mapping` layer must extract `parameters.ToolName` and match
-`parameters.ServerName` to the session `serverKey`.
+agy invokes MCP through `call_mcp_tool`; `parameters.ToolName` carries the host
+tool name and `parameters.ServerName` identifies the session. Host execution uses
+already-gated closures. See
+[`the investigation`](./solutions/integration-issues/agy-mcp-print-mode-discovery.md)
+for the successful live probe and upstream's portable configuration gap.
 
 ## Known limitations
 
@@ -222,9 +205,9 @@ The lifecycle audit covers direct transport and runtime-adapter entry points;
 pre-aborted, mid-turn aborted, overlapping, successful, and failed turns;
 result errors and stdin failures; output arriving after terminal failure;
 new and resumed conversations; and both `fusionTools` and `customTools`.
-Coding and readonly native modes keep their existing CLI flags. No per-session
-MCP bridge is available, so neither mode can provide Fusion task completion or
-verification tools. Callers needing these tools must use another runtime.
+Coding and readonly native modes keep their existing CLI flags. Linux host-tool
+turns use a private Bubblewrap MCP mount and fail explicitly when its prerequisites
+are unavailable. Native tool execution remains controlled by the CLI.
 
 ## Symptom Verification
 

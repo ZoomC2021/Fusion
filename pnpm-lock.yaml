@@ -895,6 +895,9 @@ importers:
 
   plugins/fusion-plugin-agy-runtime:
     dependencies:
+      '@fusion-plugin-examples/acp-runtime':
+        specifier: workspace:*
+        version: link:../fusion-plugin-acp-runtime
       '@fusion/core':
         specifier: workspace:*
         version: link:../../packages/core

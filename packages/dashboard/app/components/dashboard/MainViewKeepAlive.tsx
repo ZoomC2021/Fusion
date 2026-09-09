@@ -64,18 +64,19 @@ function renderBoardSubtree(props: MainContentProps, active: boolean) {
     resetTask,
     duplicateTask,
     mergeTask,
-    archiveTask,
-    unarchiveTask,
     revertTask,
     modalManager,
     deleteTask,
-    archiveAllDone,
-    loadArchivedTasks,
-    loadMoreArchivedTasks,
-    archivedSortMode,
-    changeArchivedSortMode,
-    archivedHasMore,
-    archivedLoadingMore,
+    loadMoreCurrentTasks,
+    currentTasksTotal,
+    currentTasksHasMore,
+    currentTasksLoadingMore,
+    loadMoreCompletedTasks,
+    completedCounts,
+    completedHasMore,
+    completedLoadingMore,
+    completedSortMode,
+    changeCompletedSortMode,
     searchQuery,
     availableModels,
     handleOpenDetailWithTab,
@@ -126,18 +127,19 @@ function renderBoardSubtree(props: MainContentProps, active: boolean) {
         onResetTask={resetTask}
         onDuplicateTask={duplicateTask}
         onMergeTask={mergeTask}
-        onArchiveTask={archiveTask}
-        onUnarchiveTask={unarchiveTask}
         onRevertTask={revertTask}
         onReviseTask={(task) => modalManager.openNewTaskWithDescription(task.description)}
         onDeleteTask={deleteTask}
-        onArchiveAllDone={archiveAllDone}
-        onLoadArchivedTasks={loadArchivedTasks}
-        onLoadMoreArchivedTasks={loadMoreArchivedTasks}
-        archivedSortMode={archivedSortMode}
-        onArchivedSortModeChange={changeArchivedSortMode}
-        archivedHasMore={archivedHasMore}
-        archivedLoadingMore={archivedLoadingMore}
+        onLoadMoreCurrentTasks={loadMoreCurrentTasks}
+        currentTasksTotal={currentTasksTotal}
+        currentTasksHasMore={currentTasksHasMore}
+        currentTasksLoadingMore={currentTasksLoadingMore}
+        onLoadMoreCompletedTasks={loadMoreCompletedTasks}
+        completedCounts={completedCounts}
+        completedHasMore={completedHasMore}
+        completedLoadingMore={completedLoadingMore}
+        completedSortMode={completedSortMode}
+        onCompletedSortModeChange={changeCompletedSortMode}
         searchQuery={searchQuery}
         availableModels={availableModels}
         onOpenDetailWithTab={handleOpenDetailWithTab}
@@ -171,7 +173,6 @@ function renderListSubtree(props: MainContentProps, active: boolean) {
     modalManager,
     pauseTask,
     unpauseTask,
-    archiveTask,
     revertTask,
     mergeTask,
     resetTask,
@@ -190,6 +191,9 @@ function renderListSubtree(props: MainContentProps, active: boolean) {
     handleToggleFavorite,
     handleToggleModelFavorite,
     searchQuery,
+    loadMoreCurrentTasks,
+    currentTasksHasMore,
+    currentTasksLoadingMore,
     lastFetchTimeMs,
     prAuthAvailable,
     autoMerge,
@@ -214,7 +218,6 @@ function renderListSubtree(props: MainContentProps, active: boolean) {
         onReviseTask={(task) => modalManager.openNewTaskWithDescription(task.description)}
         onPauseTask={pauseTask}
         onUnpauseTask={unpauseTask}
-        onArchiveTask={archiveTask}
         onRevertTask={revertTask}
         onMergeTask={mergeTask}
         onResetTask={resetTask}
@@ -233,6 +236,9 @@ function renderListSubtree(props: MainContentProps, active: boolean) {
         onToggleFavorite={handleToggleFavorite}
         onToggleModelFavorite={handleToggleModelFavorite}
         searchQuery={searchQuery}
+        onLoadMoreCurrentTasks={loadMoreCurrentTasks}
+        currentTasksHasMore={currentTasksHasMore}
+        currentTasksLoadingMore={currentTasksLoadingMore}
         lastFetchTimeMs={lastFetchTimeMs}
         prAuthAvailable={prAuthAvailable}
         autoMerge={autoMerge}
